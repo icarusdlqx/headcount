@@ -31,6 +31,18 @@ interface NpcContent {
     capped: Record<string, string>;
   };
   ui: Record<string, string>;
+  sinks: Record<string, { label: string; line: string; exhausted: string }>;
+  steveScenario: {
+    ask: Record<string, string>;
+    choices: Record<string, string>;
+    replies: Record<string, string>;
+    daleAsks: {
+      open: string;
+      choices: Record<string, string>;
+      replies: Record<string, string>;
+    };
+    aftermath: Record<string, string>;
+  };
 }
 
 // resolveJsonModule widens the maps, so the cast is required rather than lazy —

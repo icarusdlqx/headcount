@@ -184,26 +184,26 @@
     }
   },
   "sinks": {
-    "_comment": "What a token BUYS at M4, using only what the game already contains: the fax machine, the clock, the boss and five meters. Everything here is real today — nothing is a promise against M5 or M6.",
+    "_comment": "What a token buys. Every one is real today: the fax, the clock, the boss, the meters. {times} is filled from Dale's actual schedule.",
     "marjorie": {
-      "label": "Ask what Dale's mood is",
-      "line": "\"He's had the second coffee. Stay at your desk until three and he'll walk right past you.\"",
-      "effect": "Reveals when Dale's next two aisle walks are, for the rest of the day."
+      "label": "Ask what Dale's up to",
+      "line": "\"He'll be down your aisle at {times}. You didn't hear it from me. You never do.\"",
+      "exhausted": "\"He's done his rounds. You're safe as houses till five.\""
     },
     "dennis": {
-      "label": "Ask about the fax machine",
-      "line": "\"Dial nine first. Everyone knows that. Nobody was told it.\"",
-      "effect": "Teaches one unlearned fax fact outright."
+      "label": "Ask about the fax",
+      "line": "\"Fine. One thing, and we never spoke. Write it down, because I won't say it twice.\"",
+      "exhausted": "\"You already know everything I know. That's genuinely unsettling.\""
     },
     "steve": {
-      "label": "Ask him to take a job off your tray",
-      "line": "\"Say no more. Give me the ugly one.\"",
-      "effect": "Removes one job from today's tray at no time cost. He may not actually send it."
+      "label": "Ask him to take one",
+      "line": "\"Say no more. Give me the ugly one.\" He takes the top of your tray and ambles off.",
+      "exhausted": "\"You've got nothing in the tray. Look at you.\""
     },
     "pat": {
-      "label": "Ask her to sign off early",
+      "label": "Ask her to sign one off",
       "line": "\"I'll date it as received this morning. I'm not comfortable. But I'll do it.\"",
-      "effect": "One fax counts as sent without walking there."
+      "exhausted": "\"There's nothing outstanding to date. Which is how it should be.\""
     }
   },
   "decay": {
@@ -216,6 +216,10 @@
     "continue": "E — continue",
     "offer": "E — stay and listen ({min} min)   ·   Esc — get back to it",
     "close": "E — back to work",
-    "storyDone": "You've heard today's instalment."
+    "storyDone": "You've heard today's instalment.",
+    "optionListen": "Hear them out",
+    "optionLeave": "Get back to it",
+    "pick": "1-4 to choose  ·  Esc — walk away",
+    "noMoreWalks": "he's done his rounds for today"
   }
 }

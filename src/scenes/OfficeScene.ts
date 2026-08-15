@@ -24,8 +24,12 @@ import { ACTOR_IDS } from '../sim/npcRoster';
 import { createPose, poseAt, type NpcPose } from '../sim/npcSchedule';
 import { DialogueBox } from '../ui/DialogueBox';
 import { NPC_TEXT, chatterFor, greetingFor, nameFor, storyFor, titleFor } from '../ui/npcTalk';
+import { formatClock } from '../ui/format';
+import { METER } from '../sim/meters';
+import type { PlanLeg } from '../sim/npcSchedule';
 import { isFavorNpc } from '../sim/npcRoster';
 import { assertVisibilityCoverage, type PresenceSample } from '../sim/meters';
+
 import { misdialReplyDeltas } from '../sim/faxTray';
 import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
 import { DAY_EVENTS, type DayEndInfo } from '../sim/events';
@@ -39,6 +43,14 @@ const TILE_NAME: Record<number, string> = Object.fromEntries(
 );
 
 const FLAVOUR = interactions as Record<string, string[] | string>;
+
+/** A leg that ends on the aisle tile is one of Dale's walkthroughs — which is
+ *  exactly what Marjorie is selling when she tells you his movements. */
+function pathEndsAtAisle(leg: PlanLeg): boolean {
+  const tiles = leg.path.length / 2;
+  if (tiles === 0) return false;
+  return leg.path[(tiles - 1) * 2] === PLACES.farmAisle.x && leg.path[(tiles - 1) * 2 + 1] === PLACES.farmAisle.y;
+}
 
 /** Facing -> tile offset, hoisted so the look-at probe allocates nothing. */
 const FACING_STEP: Record<string, readonly [number, number]> = {
@@ -74,12 +86,19 @@ export class OfficeScene extends Phaser.Scene {
 
   private dialogue!: DialogueBox;
   /** The open conversation, if any. Stage drives what E does next. */
-  private talk: { id: string; stage: 'greeting' | 'chatter' | 'offer' | 'middle' | 'end' | 'granted' } | null = null;
+  private talk: {
+    id: string;
+    stage:
+      | 'greeting' | 'menu' | 'chatter' | 'offer' | 'middle' | 'end' | 'granted'
+      | 'steveAsk' | 'steveReply' | 'daleAsk' | 'daleReply';
+  } | null = null;
   /** One story per person per day; reset each morning. */
   private storiesHeard = new Set<string>();
   /** Distinct chatter within a day: nth chat with someone draws a fresh line. */
   private chatCounts = new Map<string, number>();
   private lastTrayCount = -1;
+  /** What each numbered option in the open menu does. */
+  private menuActions: ('listen' | 'spend' | 'leave')[] = [];
 
   /** Reused every minute so the meter step allocates nothing. Posture is derived
    *  fresh each time from the pause stack rather than latched by the fax scene:
@@ -162,6 +181,9 @@ export class OfficeScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', this.interact, this);
     this.input.keyboard?.on('keydown-ENTER', this.interact, this);
     this.input.keyboard?.on('keydown-ESC', this.leaveTalk, this);
+    (['ONE', 'TWO', 'THREE', 'FOUR'] as const).forEach((name, index) => {
+      this.input.keyboard?.on(`keydown-${name}`, () => this.chooseOption(index));
+    });
 
     this.wireDirector();
     this.wireWindowFocus();
@@ -319,6 +341,218 @@ export class OfficeScene extends Phaser.Scene {
 
   // --- conversations -------------------------------------------------------
 
+  /** A numbered option was pressed. Ignored unless options are actually live. */
+  private chooseOption(index: number): void {
+    if (!this.talk || index >= this.dialogue.choices) return;
+    const { id, stage } = this.talk;
+
+    if (stage === 'menu') {
+      this.resolveMenu(id, index);
+      return;
+    }
+    if (stage === 'steveAsk') {
+      this.resolveSteveAsk(index);
+      return;
+    }
+    if (stage === 'daleAsk') {
+      this.resolveDaleAsk(index);
+      return;
+    }
+  }
+
+  /** The opening menu: hear them out, spend what they owe you, or get on. */
+  private showMenu(id: string): void {
+    const favor = this.director.favorWith(id);
+    const canStory = isFavorNpc(id) && !this.storiesHeard.has(id) && storyFor(id) !== null;
+    const canSpend = isFavorNpc(id) && favor > 0;
+
+    const options: string[] = [];
+    this.menuActions = [];
+    if (canStory) {
+      options.push(NPC_TEXT.ui['optionListen'] ?? '');
+      this.menuActions.push('listen');
+    }
+    if (canSpend) {
+      options.push(`${NPC_TEXT.favors.spend[id] ?? ''}  (${favor})`);
+      this.menuActions.push('spend');
+    }
+    options.push(NPC_TEXT.ui['optionLeave'] ?? '');
+    this.menuActions.push('leave');
+
+    this.talk = { id, stage: 'menu' };
+    this.dialogue.showChoices(
+      chatterFor(id, this.director.rng(`day:${this.director.state.dayIndex}:chat:${id}:${this.chatCounts.get(id) ?? 0}`)),
+      options,
+      NPC_TEXT.ui['pick'] ?? '',
+    );
+  }
+
+  private resolveMenu(id: string, index: number): void {
+    const action = this.menuActions[index];
+    if (action === 'listen') {
+      const story = storyFor(id);
+      if (!story) return void this.closeTalk();
+      this.talk = { id, stage: 'offer' };
+      this.dialogue.say(story.open, fill(NPC_TEXT.ui['offer'] ?? '', { min: BALANCE.dialogue.storyMinutes }));
+      return;
+    }
+    if (action === 'spend') {
+      this.spendFavor(id);
+      return;
+    }
+    this.closeTalk();
+  }
+
+  /**
+   * Cashing in. Every sink is built from what the game already contains, and
+   * each one costs a few minutes: asking is never free, even among friends.
+   */
+  private spendFavor(id: string): void {
+    this.director.spendFavor(id);
+    this.director.spendMinutes(BALANCE.dialogue.sinks.minutes);
+    let line = NPC_TEXT.sinks[id]?.line ?? '';
+
+    if (id === 'dennis') {
+      const token = this.director.nextUnlearnedFaxToken();
+      if (token) this.director.markLearned([token]);
+      else line = NPC_TEXT.sinks[id]?.exhausted ?? line;
+    } else if (id === 'steve') {
+      if (!this.director.dropNextJob()) line = NPC_TEXT.sinks[id]?.exhausted ?? line;
+    } else if (id === 'pat') {
+      if (!this.director.creditJobWithoutSending()) line = NPC_TEXT.sinks[id]?.exhausted ?? line;
+    } else if (id === 'marjorie') {
+      line = fill(line, { times: this.upcomingDaleWalks() });
+    }
+
+    this.hud.setMeters(this.director.meters);
+    this.talk = { id, stage: 'end' };
+    this.dialogue.say(line, NPC_TEXT.ui['close'] ?? '');
+  }
+
+  /** Marjorie's tip-off: when Dale is next in the aisle, read off the schedule. */
+  private upcomingDaleWalks(): string {
+    const legs = this.director.plan['dale'] ?? [];
+    const now = this.director.minute;
+    const times = legs
+      .filter((leg) => leg.startMinute > now && pathEndsAtAisle(leg))
+      .slice(0, 2)
+      .map((leg) => formatClock(leg.startMinute, HUD_TEXT.timeFormat, HUD_TEXT.meridiem));
+    return times.length > 0 ? times.join(' and ') : (NPC_TEXT.ui['noMoreWalks'] ?? '');
+  }
+
+  // --- Steve's quick lunch --------------------------------------------------
+
+  /** True while he is standing at your desk about to ask. */
+  private steveIsAsking(): boolean {
+    const min = this.director.minute;
+    const s = BALANCE.dialogue.steve;
+    return (
+      this.director.steveScenario === 'none' &&
+      !this.director.steveBurned &&
+      min >= s.askFromMinute &&
+      min < s.leavesAtMinute
+    );
+  }
+
+  /** True while Dale might reasonably ask where Steve has got to. */
+  private daleWouldAsk(): boolean {
+    const min = this.director.minute;
+    const s = BALANCE.dialogue.steve;
+    const stage = this.director.steveScenario;
+    return (
+      min >= s.leavesAtMinute &&
+      min < s.returnsAtMinute &&
+      (stage === 'covered' || stage === 'partial' || stage === 'declined')
+    );
+  }
+
+  private openSteveAsk(): void {
+    const c = NPC_TEXT.steveScenario;
+    this.talk = { id: 'steve', stage: 'steveAsk' };
+    this.director.setSteveStage('asked');
+    this.dialogue.show('Steve', titleFor('steve'), c.ask.open, '');
+    this.dialogue.showChoices(`${c.ask.detail} ${c.ask.stack}`, [
+      c.choices.cover,
+      c.choices.coverPartial,
+      c.choices.decline,
+      c.choices.needle,
+    ], NPC_TEXT.ui['pick'] ?? '');
+  }
+
+  private resolveSteveAsk(index: number): void {
+    const c = NPC_TEXT.steveScenario;
+    const s = BALANCE.dialogue.steve;
+
+    // The free question. He answers honestly and the offer stands.
+    if (index === 3) {
+      this.dialogue.showChoices(c.replies.needle, [c.choices.cover, c.choices.coverPartial, c.choices.decline], NPC_TEXT.ui['pick'] ?? '');
+      return;
+    }
+
+    if (index === 0) {
+      this.director.setSteveStage('covered');
+      this.director.applyDeltas([{ key: METER.coworkerRep, delta: s.coverRapport }]);
+      // His filing goes to the FRONT of your tray: the cost is real work.
+      this.director.addSteveJob();
+      this.director.grantFavor('steve');
+      this.lastTrayCount = -1;
+      this.dialogue.say(c.replies.cover, NPC_TEXT.ui['close'] ?? '');
+    } else if (index === 1) {
+      this.director.setSteveStage('partial');
+      this.director.applyDeltas([{ key: METER.coworkerRep, delta: s.partialRapport }]);
+      this.dialogue.say(c.replies.coverPartial, NPC_TEXT.ui['close'] ?? '');
+    } else {
+      this.director.setSteveStage('declined');
+      this.director.applyDeltas([{ key: METER.coworkerRep, delta: s.declineRapport }]);
+      this.dialogue.say(c.replies.decline, NPC_TEXT.ui['close'] ?? '');
+    }
+
+    this.hud.setMeters(this.director.meters);
+    this.talk = { id: 'steve', stage: 'end' };
+  }
+
+  private openDaleAsk(): void {
+    const c = NPC_TEXT.steveScenario.daleAsks;
+    this.talk = { id: 'dale', stage: 'daleAsk' };
+    this.dialogue.show('Dale', titleFor('dale'), c.open, '');
+    this.dialogue.showChoices(c.open, [c.choices.cover, c.choices.shrug, c.choices.report], NPC_TEXT.ui['pick'] ?? '');
+  }
+
+  private resolveDaleAsk(index: number): void {
+    const c = NPC_TEXT.steveScenario.daleAsks;
+    const s = BALANCE.dialogue.steve;
+    let line: string;
+
+    if (index === 0) {
+      // The lie. It survives if you actually did his filing — which is exactly
+      // why the stack jumping your queue is the cost that matters.
+      const checks = this.director.rng(`day:${this.director.state.dayIndex}:daleCheck`).next() < s.bossChecksChance;
+      if (checks && !this.director.steveJobSent) {
+        line = c.replies.coverChecked;
+        this.director.applyDeltas([
+          { key: METER.bossApproval, delta: s.caughtStanding },
+          { key: METER.stress, delta: s.caughtStress },
+        ]);
+      } else {
+        line = c.replies.coverBelieved;
+      }
+    } else if (index === 1) {
+      line = c.replies.shrug;
+      this.director.applyDeltas([{ key: METER.bossApproval, delta: s.shrugStanding }]);
+    } else {
+      line = c.replies.report;
+      this.director.applyDeltas([{ key: METER.bossApproval, delta: s.reportStanding }]);
+      // The durable half: Dale asks you first from now on, permanently.
+      this.director.earnDaleTrust();
+      this.director.burnSteve();
+    }
+
+    this.director.setSteveStage('resolved');
+    this.hud.setMeters(this.director.meters);
+    this.talk = { id: 'dale', stage: 'end' };
+    this.dialogue.say(line, NPC_TEXT.ui['close'] ?? '');
+  }
+
   /** The nearest visible cast member within arm's reach, or null. */
   private nearestTalkableNpc(): Npc | null {
     const radius = BALANCE.npc.talkRadius * BALANCE.view.tileSize;
@@ -352,12 +586,15 @@ export class OfficeScene extends Phaser.Scene {
     this.hud.clear();
     this.talk = { id, stage: 'greeting' };
 
+    // The scene takes precedence over small talk, on both sides of it.
+    if (id === 'steve' && this.steveIsAsking()) return void this.openSteveAsk();
+    if (id === 'dale' && this.daleWouldAsk()) return void this.openDaleAsk();
+
     const favor = this.director.favorWith(id);
-    const burned = (this.director.state.flags[`grudge.${id}`] ?? 0) > 0;
     this.dialogue.show(
       nameFor(id),
       titleFor(id),
-      greetingFor(id, favor, burned),
+      greetingFor(id, favor, this.director.steveBurned && id === 'steve'),
       NPC_TEXT.ui['continue'] ?? '',
     );
   }
@@ -370,24 +607,14 @@ export class OfficeScene extends Phaser.Scene {
     if (stage === 'greeting') {
       const nth = this.chatCounts.get(id) ?? 0;
       this.chatCounts.set(id, nth + 1);
-      const line = chatterFor(id, this.director.rng(`day:${day}:chat:${id}:${nth}`));
 
-      // Favor NPCs with an unheard story get the offer next; everyone else
-      // (and Dale, always) closes after their line.
-      const canStory = isFavorNpc(id) && !this.storiesHeard.has(id) && storyFor(id) !== null;
-      this.talk.stage = canStory ? 'chatter' : 'end';
-      this.dialogue.say(line, canStory ? (NPC_TEXT.ui['continue'] ?? '') : (NPC_TEXT.ui['close'] ?? ''));
-      return;
-    }
-
-    if (stage === 'chatter') {
-      const story = storyFor(id);
-      if (!story) {
-        this.closeTalk();
+      // Dale never owes anybody anything, so he just says his line and goes.
+      if (!isFavorNpc(id)) {
+        this.talk.stage = 'end';
+        this.dialogue.say(chatterFor(id, this.director.rng(`day:${day}:chat:${id}:${nth}`)), NPC_TEXT.ui['close'] ?? '');
         return;
       }
-      this.talk.stage = 'offer';
-      this.dialogue.say(story.open, fill(NPC_TEXT.ui['offer'] ?? '', { min: BALANCE.dialogue.storyMinutes }));
+      this.showMenu(id);
       return;
     }
 

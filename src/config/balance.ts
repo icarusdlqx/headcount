@@ -264,6 +264,48 @@ export const BALANCE = {
     /** One story per person per day, or favor-farming becomes the optimal
      *  morning and the office turns into a vending machine. */
     storiesPerNpcPerDay: 1,
+
+    /**
+     * Steve's quick lunch. He comes to your desk at 11:10 and is gone from
+     * 11:40 to 2:15; Dale asks after him somewhere in between.
+     */
+    steve: {
+      askFromMinute: 130,
+      leavesAtMinute: 160,
+      returnsAtMinute: 315,
+      /** Covering pays rapport, and the stack he leaves you costs output. */
+      coverRapport: 14,
+      /** Cover the lie but refuse the filing: cheaper, and the lie is thinner. */
+      partialRapport: 7,
+      declineRapport: -4,
+      /**
+       * Dale checks the printer this often when you say Steve is there. Doing
+       * the filing makes the lie survive the check — which is the whole reason
+       * the stack jumping your queue matters.
+       */
+      bossChecksChance: 0.55,
+      caughtStanding: -12,
+      caughtStress: 8,
+      /** Selling him out. The Standing is a one-off... */
+      reportStanding: 9,
+      /** ...but this is the real prize: Dale asks YOU first from now on, a
+       *  permanent lift to where his opinion of you settles. Reporting is a
+       *  lasting gain against a lasting loss, which is the trade the game is
+       *  about. */
+      reportTrustBossTargetBonus: 8,
+      shrugStanding: -2,
+    },
+
+    /** What a token buys. Every one of these is real today, built from the fax,
+     *  the clock, the boss and the meters — nothing promised against M5 or M6. */
+    sinks: {
+      /** Steve takes a job off your tray. He may not actually send it. */
+      steveJobsRemoved: 1,
+      /** Pat back-dates one as received: the output without the walk. */
+      patProductivity: 18,
+      /** Asking costs a moment of your day, whoever you ask. */
+      minutes: 4,
+    },
   },
 
   /** Persistence caps. Engineering invariants, not anti-cheat. */

@@ -47,6 +47,9 @@ export const SCHEDULES: Readonly<Record<ActorId, readonly ScheduleBlock[]>> = {
     { at: 0, place: 'steveCubicle' },
     { at: 90, place: 'breakRoom' },
     { at: 125, place: 'steveCubicle' },
+    // He comes to YOU at 11:10 to ask. If you are not at your desk he simply
+    // goes without asking, which is its own outcome.
+    { at: 130, place: 'playerCubicleMouth' },
     { at: 160, place: null }, // 11:40. "A lunch with a drive attached."
     { at: 315, place: 'steveCubicle' }, // 2:15
     { at: 420, place: 'breakRoom' },

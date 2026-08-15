@@ -16,7 +16,7 @@ import {
   stressTier,
   type PresenceSample,
 } from './meters';
-import { generatePanel, type FaxOutcome, type FaxPanel } from './faxMachine';
+import { FAX_TOKENS, generatePanel, type FaxOutcome, type FaxPanel } from './faxMachine';
 import { Router } from './npcPath';
 import { buildDayPlan, type DayPlan } from './npcSchedule';
 import { buildTray, faxOutcomeDeltas, foreignJamChance, type FaxJob, type MeterDelta } from './faxTray';
@@ -43,6 +43,9 @@ import {
  *
  * This is the only file in src/sim that imports Phaser, and only for its emitter.
  */
+/** Where today's Steve situation has got to. Only the grudge outlives the day. */
+export type SteveStage = 'none' | 'asked' | 'covered' | 'partial' | 'declined' | 'resolved';
+
 export class DayDirector {
   readonly events = new Phaser.Events.EventEmitter();
   readonly pause = new PauseStack();
@@ -58,6 +61,9 @@ export class DayDirector {
   private lastFaxOutcome: FaxOutcome | null = null;
   private router: Router | null = null;
   private dayPlan: DayPlan = {};
+  /** Today's Steve situation. Rebuilt each morning; only the grudge persists. */
+  private steveStage: SteveStage = 'none';
+  private steveJobId: string | null = null;
 
   constructor(state: RunState, save: SaveService) {
     this.run = state;
@@ -287,6 +293,77 @@ export class DayDirector {
     this.dayPlan = buildDayPlan(this.router, this.rng(`day:${this.run.dayIndex}:cast`));
   }
 
+  // --- the Steve situation -------------------------------------------------
+
+  get steveScenario(): SteveStage {
+    return this.steveStage;
+  }
+
+  setSteveStage(stage: SteveStage): void {
+    this.steveStage = stage;
+  }
+
+  /** True once the player has burned him. Persisted: people remember. */
+  get steveBurned(): boolean {
+    return (this.run.flags['grudge.steve'] ?? 0) > 0;
+  }
+
+  burnSteve(): void {
+    this.run.flags['grudge.steve'] = 1;
+  }
+
+  /** Dale asks you first from now on. The durable half of selling Steve out. */
+  get daleTrusts(): boolean {
+    return (this.run.flags['dale.trusts'] ?? 0) > 0;
+  }
+
+  earnDaleTrust(): void {
+    this.run.flags['dale.trusts'] = 1;
+  }
+
+  /**
+   * Steve's filing, pushed to the FRONT of your tray.
+   *
+   * The front is the entire point. Appended to the back of a tray nobody empties
+   * in a 480-minute day, his work would never actually land on you and covering
+   * would be a gift rather than a choice. At the front it displaces your own
+   * output at full opportunity cost — and it is what makes Dale's "did you
+   * really do his filing?" a question with an answer.
+   */
+  addSteveJob(): void {
+    const job = buildTray(this.rng(`day:${this.run.dayIndex}:steveJob`), this.run.dayIndex)[0];
+    if (!job) return;
+    const favorJob: FaxJob = { ...job, id: `steve:${this.run.dayIndex}`, owner: 'colleague', colleagueId: 'steve' };
+    this.jobs.unshift(favorJob);
+    this.steveJobId = favorJob.id;
+  }
+
+  /** Whether his stack actually went out — the fact Dale's check turns on. */
+  get steveJobSent(): boolean {
+    return this.steveJobId !== null && !this.jobs.some((job) => job.id === this.steveJobId);
+  }
+
+  /** Remove a job outright: Steve taking the ugly one off your hands. */
+  dropNextJob(): boolean {
+    if (this.jobs.length === 0) return false;
+    this.jobs.shift();
+    return true;
+  }
+
+  /** Pat's back-dating: the output without the walk. */
+  creditJobWithoutSending(): boolean {
+    const job = this.jobs.shift();
+    if (!job) return false;
+    this.run.stats.faxSent += 1;
+    adjustMeter(this.run.meters, METER.productivity, BALANCE.dialogue.sinks.patProductivity);
+    return true;
+  }
+
+  /** One fax fact the player has not yet learned, for Dennis to give away. */
+  nextUnlearnedFaxToken(): string | null {
+    return FAX_TOKENS.find((token) => !this.run.learned.includes(token)) ?? null;
+  }
+
   // --- favors --------------------------------------------------------------
 
   /** Per-NPC tokens, straight out of the persisted flags record. */
@@ -301,6 +378,15 @@ export class DayDirector {
     const held = this.run.flags[key] ?? 0;
     if (held >= BALANCE.dialogue.favorCap) return false;
     this.run.flags[key] = held + 1;
+    return true;
+  }
+
+  /** Cash one in. Returns false when there is nothing owed. */
+  spendFavor(id: string): boolean {
+    const key = `favor.${id}`;
+    const held = this.run.flags[key] ?? 0;
+    if (held <= 0) return false;
+    this.run.flags[key] = held - 1;
     return true;
   }
 
@@ -335,6 +421,8 @@ export class DayDirector {
     // Rebuilt from the seed every morning and never persisted, so an abandoned
     // day regenerates an identical tray and there is nothing to migrate.
     this.jobs = buildTray(this.rng(`day:${this.run.dayIndex}:fax`), this.run.dayIndex);
+    this.steveStage = 'none';
+    this.steveJobId = null;
     // Today's staging. Rebuilt from the seed every morning and never persisted.
     this.rebuildDayPlan();
 
