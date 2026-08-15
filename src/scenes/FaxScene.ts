@@ -105,6 +105,14 @@ export class FaxScene extends Phaser.Scene {
     this.job = job;
     this.machine = createMachine(this.panel, this.director.faxJammedOnArrival);
 
+    // These are class fields, so they survive scene.stop() while the Text
+    // objects they hold do NOT. Without this, every create() appends another
+    // six labels and refreshLabels writes the real text onto last session's
+    // destroyed objects — the label strips, which are the whole visible payoff
+    // of the nine mastery tokens, stopped appearing after the first fax.
+    this.keyLabels.length = 0;
+    this.trayLabels.length = 0;
+
     this.scene.bringToTop();
     this.buildWindow();
 

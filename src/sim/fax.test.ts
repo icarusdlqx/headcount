@@ -60,8 +60,18 @@ describe('the canonical procedure', () => {
 
     expect(step.outcome?.kind).toBe('sent');
     expect(step.outcome?.jams).toBe(0);
-    // 26 in-game minutes for a mastered job: base 14 + tray/feed/line/start + transmit.
-    expect(step.outcome?.minutes).toBeLessThanOrEqual(30);
+    /**
+     * FOURTEEN, exactly: tray 2 + FEED 2 + LINE 2 + five digits at 0 + START 2 +
+     * transmit 6. createMachine always selects the wrong tray, so the flip is
+     * unavoidable and is part of the floor.
+     *
+     * This asserted `<= 30` against a comment claiming 26, so a wrong number sat
+     * here unchallenged and propagated — it is what made a later milestone
+     * believe the day was nearly full when a mastered tray costs about 92 of 480
+     * minutes. Pin it exactly.
+     */
+    const m = BALANCE.fax.minutes;
+    expect(step.outcome?.minutes).toBe(m.tray + m.press * 2 + m.start + m.transmit);
   });
 
   it('misdials — and still transmits — without the 9', () => {
