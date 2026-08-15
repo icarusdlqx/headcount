@@ -49,5 +49,34 @@ export const SOLID_TILES: readonly TileIndex[] = [
   TILE.PLANT,
 ];
 
+/**
+ * How much each tile blocks SIGHT, which is a different question from how much
+ * it blocks walking — and the difference is the whole of M5. A desk stops you
+ * walking and not seeing; a cubicle partition hides a SEATED person and merely
+ * dims a standing one, which is what makes ducking behind your own monitor mean
+ * something.
+ */
+export const OPACITY = { CLEAR: 0, HEAD_HEIGHT: 1, OPAQUE: 2 } as const;
+export type Opacity = (typeof OPACITY)[keyof typeof OPACITY];
+
+export const SIGHT_OPACITY: Readonly<Record<number, Opacity>> = {
+  [TILE.WALL]: OPACITY.OPAQUE,
+  [TILE.RACK]: OPACITY.OPAQUE,
+  /** The load-bearing one. */
+  [TILE.CUBICLE]: OPACITY.HEAD_HEIGHT,
+  /** Your head is above your desk, so a desk hides nobody. */
+  [TILE.DESK]: OPACITY.CLEAR,
+  [TILE.TABLE]: OPACITY.CLEAR,
+  [TILE.CARPET]: OPACITY.CLEAR,
+  /** Load-bearing the other way: a doorway is a sightline, which is why Dale's
+   *  office door matters and why the corridor is exposed. */
+  [TILE.DOORWAY]: OPACITY.CLEAR,
+  [TILE.VINYL]: OPACITY.CLEAR,
+  [TILE.PRINTER]: OPACITY.HEAD_HEIGHT,
+  [TILE.FAX]: OPACITY.HEAD_HEIGHT,
+  [TILE.COOLER]: OPACITY.HEAD_HEIGHT,
+  [TILE.PLANT]: OPACITY.HEAD_HEIGHT,
+};
+
 /** Number of tiles in the generated tileset, used to size the source texture. */
 export const TILE_COUNT = 12;

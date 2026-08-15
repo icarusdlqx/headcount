@@ -403,6 +403,33 @@ export const BALANCE = {
     speakerDelta: 14,
   },
 
+  /** Line of sight. Who can see you, and how well. */
+  sight: {
+    /** Beyond this many tiles an observer contributes nothing at all. */
+    rangeTiles: 14,
+    /** Inside this, no distance falloff: close is close. */
+    nearTiles: 3,
+    /** What a head-height partition does to a STANDING target. Seated, it blocks
+     *  outright. Two partitions between you and someone is nearly nothing. */
+    partitionAttenuation: 0.45,
+    /** Below this the ray is treated as blocked, so a long chain of partitions
+     *  terminates instead of contributing a rounding error. */
+    minFactor: 0.08,
+    /**
+     * How much of your BODY registers when an observer is facing away. Screen
+     * exposure is gated on facing outright — a man with his back to your monitor
+     * cannot read it, and pretending he can is what turned this mechanic into a
+     * timetable to memorise rather than a risk to judge.
+     */
+    behindMultiplier: 0.35,
+    /**
+     * Floor under the Visibility meter from the room itself. Without it the
+     * meter reads zero all morning whenever the floor is empty, which looks
+     * broken and teaches the player nothing.
+     */
+    ambientWeight: 0.45,
+  },
+
   /** Comedic degradation thresholds. Never a hard fail. */
   stress: {
     jitterAt: 45,
