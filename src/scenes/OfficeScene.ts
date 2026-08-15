@@ -4,18 +4,23 @@ import { TILESET_KEY } from '../art/placeholder';
 import { Player } from '../entities/Player';
 import { Hud, HUD_TEXT, createFluorescentOverlay } from '../ui/Hud';
 import { UI_FONT } from '../ui/Win95';
-import { CONTENT } from '../ui/daySummaryView';
+import { CONTENT, assertContentIntegrity } from '../ui/daySummaryView';
+import { fill } from '../ui/format';
 import { morningOpener } from './DayEndScene';
 import {
   MAP_HEIGHT,
   MAP_WIDTH,
   PLACES,
+  ROOMS,
   buildTileGrid,
   findUnreachablePlaces,
   roomAt,
 } from '../world/officeMap';
 import { SOLID_TILES, TILE } from '../world/tiles';
 import { getDirector, type DayDirector } from '../sim/DayDirector';
+import { assertVisibilityCoverage, type PresenceSample } from '../sim/meters';
+import { misdialReplyDeltas } from '../sim/faxTray';
+import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
 import { DAY_EVENTS, type DayEndInfo } from '../sim/events';
 import { MINUTES_PER_DAY } from '../sim/DayClock';
 import { FLAGS } from '../util/flags';
@@ -57,6 +62,21 @@ export class OfficeScene extends Phaser.Scene {
   private readonly tileScratch = new Phaser.Math.Vector2();
   private lastRoom = '';
 
+  /** Reused every minute so the meter step allocates nothing. Posture is derived
+   *  fresh each time from the pause stack rather than latched by the fax scene:
+   *  a latched 'busy' never clears, and busy has zero drift, which silently
+   *  freezes Boss Approval and Stress forever after the player's first fax. */
+  private readonly presence: PresenceSample = {
+    room: '',
+    posture: 'desk',
+    moving: false,
+    purposeful: false,
+    atOwnDesk: true,
+    speakerToday: false,
+    tileX: 0,
+    tileY: 0,
+  };
+
   constructor() {
     super('Office');
   }
@@ -71,6 +91,11 @@ export class OfficeScene extends Phaser.Scene {
       if (stranded.length > 0) {
         console.warn('[officeMap] unreachable from spawn:', stranded.join('; '));
       }
+      // Authoring mistakes get found at author time, not as a silently wrong
+      // number three weeks later.
+      for (const problem of assertContentIntegrity()) console.warn(`[content] ${problem}`);
+      for (const problem of assertFaxContentIntegrity(LCD_CODES)) console.warn(`[content] ${problem}`);
+      for (const problem of assertVisibilityCoverage(ROOMS)) console.warn(`[balance] ${problem}`);
     }
 
     const map = this.make.tilemap({ data: grid as number[][], tileWidth: size, tileHeight: size });
@@ -97,8 +122,8 @@ export class OfficeScene extends Phaser.Scene {
     this.overlay = createFluorescentOverlay(this);
     this.hud = new Hud(this);
 
-    this.input.keyboard?.on('keydown-E', this.lookAtFacingTile, this);
-    this.input.keyboard?.on('keydown-SPACE', this.lookAtFacingTile, this);
+    this.input.keyboard?.on('keydown-E', this.interact, this);
+    this.input.keyboard?.on('keydown-SPACE', this.interact, this);
 
     this.wireDirector();
     this.wireWindowFocus();
@@ -112,6 +137,7 @@ export class OfficeScene extends Phaser.Scene {
     // After beginDay, so a persistence problem outranks the morning opener in
     // the one slot the status bar has.
     this.showBootNotices();
+    this.hud.setMeters(this.director.meters);
   }
 
   private wireDirector(): void {
@@ -178,6 +204,24 @@ export class OfficeScene extends Phaser.Scene {
   private onMinute(minute: number): void {
     this.hud.setClock(this.director.clock.displayMinute, this.director.weekday);
 
+    // Passive drift hangs off the discrete minute, never off update(): a
+    // per-frame drift makes 144Hz and 60Hz machines play different days.
+    this.director.stepMeters(this.samplePresence());
+    this.hud.setMeters(this.director.meters);
+
+    // The bill for a misdial, arriving back at your desk long after you felt
+    // good about it. Suppressed under a modal: hud.say uses a scene timer, and a
+    // paused scene's timers do not advance, so the line would sit frozen behind
+    // the panel and then eat the next message's window.
+    if (this.director.takeMisdialReply(minute) && !this.director.pause.modal) {
+      this.director.applyDeltas(misdialReplyDeltas());
+      const dept = this.director.rng(`day:${this.director.state.dayIndex}:dept`).pick(FAX_TEXT.departments);
+      this.hud.say(
+        fill(this.director.rng(`day:${this.director.state.dayIndex}:reply`).pick(FAX_TEXT.outcome['misdialReply'] ?? ['']), { dept }),
+        BALANCE.ui.noticeHoldMs,
+      );
+    }
+
     if (minute < MINUTES_PER_DAY) return;
 
     // Five o'clock. Push the final clock read first so the frozen HUD under the
@@ -212,7 +256,46 @@ export class OfficeScene extends Phaser.Scene {
     if (this.scene.isPaused()) this.scene.resume();
     if (this.director.pause.running) {
       this.time.delayedCall(BALANCE.dayEnd.resumeInputLockMs, () => this.player.setFrozen(false));
+      // The natural post-modal resync point: without it the fax's Productivity
+      // gain is invisible until the next minute ticks, which is the whole payoff.
+      this.hud.setMeters(this.director.meters);
+      this.narrateFaxOutcome();
     }
+  }
+
+  /** The reward lands OUTSIDE the modal, which is what makes the walk back to
+   *  your cubicle feel earned. */
+  private narrateFaxOutcome(): void {
+    const outcome = this.director.takeFaxOutcome();
+    if (!outcome) return;
+
+    const rng = this.director.rng(`day:${this.director.state.dayIndex}:faxline:${outcome.jobId}`);
+    let pool = FAX_TEXT.outcome[outcome.kind] ?? [];
+    if (outcome.kind === 'sent' && outcome.owner === 'boss') pool = FAX_TEXT.outcome['sentBoss'] ?? pool;
+    if (outcome.kind === 'abandoned' && outcome.jamLeftOpen) pool = FAX_TEXT.outcome['jamLeft'] ?? pool;
+    if (pool.length === 0) return;
+    this.hud.say(rng.pick(pool));
+  }
+
+  /** Rebuilt in place each minute. Posture is derived, never latched. */
+  private samplePresence(): PresenceSample {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const here = this.player.tileCoords(this.tileScratch);
+    const spawn = PLACES.playerCubicle;
+
+    this.presence.room = this.lastRoom;
+    this.presence.posture = this.director.pause.has('minigame')
+      ? 'busy'
+      : Math.abs(here.x - spawn.x) <= 1 && Math.abs(here.y - spawn.y) <= 1
+        ? 'desk'
+        : 'elsewhere';
+    this.presence.moving = body.speed > 1;
+    this.presence.purposeful = body.speed > BALANCE.player.walkSpeed + 1;
+    this.presence.atOwnDesk = Math.abs(here.x - spawn.x) <= 1 && Math.abs(here.y - spawn.y) <= 1;
+    this.presence.speakerToday = this.director.speakerChargedToday;
+    this.presence.tileX = here.x;
+    this.presence.tileY = here.y;
+    return this.presence;
   }
 
   private onDayStart(): void {
@@ -256,6 +339,34 @@ export class OfficeScene extends Phaser.Scene {
 
     // Testing a 330-second day twenty times is otherwise an afternoon.
     this.input.keyboard?.on('keydown-L', () => this.director.endDayNow());
+  }
+
+  /**
+   * E does the most specific thing available: use the fax machine if you are at
+   * it, otherwise look at whatever you are facing.
+   */
+  private interact(): void {
+    if (!this.director.pause.running) return;
+
+    if (this.facingTileIs(TILE.FAX)) {
+      if (this.director.faxAvailable) {
+        this.hud.clear();
+        this.scene.launch('Fax');
+        this.director.hold('minigame');
+        return;
+      }
+      this.hud.say(this.director.nextJob === null ? HUD_TEXT.hints.faxDone : HUD_TEXT.hints.faxLate);
+      return;
+    }
+
+    this.lookAtFacingTile();
+  }
+
+  private facingTileIs(index: number): boolean {
+    const here = this.player.tileCoords(this.tileScratch);
+    const step = FACING_STEP[this.player.facing];
+    const tile = this.groundLayer.getTileAt(here.x + step![0], here.y + step![1]);
+    return tile?.index === index;
   }
 
   /** Looks at whatever the player is facing, or the floor if that is nothing. */

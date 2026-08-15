@@ -16,6 +16,8 @@ function populated() {
     distanceFt: 84,
     roomsEntered: 4,
     objectsExamined: 6,
+    productivity: 42,
+    faxSent: 2,
   });
   state.meters['productivity'] = 37;
   state.flags['favor.steve'] = 2;

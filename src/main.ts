@@ -4,6 +4,7 @@ import { PALETTE } from './art/palette';
 import { BootScene } from './scenes/BootScene';
 import { OfficeScene } from './scenes/OfficeScene';
 import { DayEndScene } from './scenes/DayEndScene';
+import { FaxScene } from './scenes/FaxScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -26,7 +27,7 @@ const config: Phaser.Types.Core.GameConfig = {
   },
   // Order matters: SceneManager.render walks this array forward, so DayEnd draws
   // above the world AND above the HUD.
-  scene: [BootScene, OfficeScene, DayEndScene],
+  scene: [BootScene, OfficeScene, FaxScene, DayEndScene],
 };
 
 const game = new Phaser.Game(config);

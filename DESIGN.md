@@ -156,8 +156,8 @@ the break room only.
 | --- | --- | --- |
 | M1 | Skeleton: Vite + Phaser + TS boots; player moves on an office tilemap with collision; deployable | **Done** |
 | M2 | Day loop: clock, day advance, end-of-day summary, `localStorage` save/load | **Done** |
-| M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | Next |
-| M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | |
+| M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | **Done** |
+| M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | Next |
 | M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | |
 | M6 | Printer Jam, Dial-Up + IT favor sink | |
 | M7 | Friday review, weighted scoring, boss commentary, week progression | |
@@ -231,6 +231,49 @@ which owns the composition and needs an event emitter.
   M3's minigames stop both, through one mechanism.
 - **`DayEndScene` owns every tween in the transition**, because Office is paused
   for most of it and a paused scene's tweens do not advance.
+
+### The meters (M3)
+
+Five meters in `RunState.meters`, an open record that has round-tripped through
+the save since M2. Productivity is a **daily** quantity reset each morning;
+Standing, Rapport and Strain carry across days and regress overnight toward
+their baselines (the boss's memory is short, coworkers remember, and Friday
+night is three nights). Visibility lives in the same record but is **excluded
+from the save blob** by an explicit transient-key filter and reseeded every
+morning — it is a reading about *now*, and the inputs that produce it are not
+persisted, so persisting the output would be a lie.
+
+Passive drift hangs off the discrete MINUTE event, never off `update()`. Both
+the Boss and Strain terms are multiplied by visibility, which means being seen is
+never free: it accelerates the gain at your desk and the bleed anywhere else, and
+it always costs strain. That one multiplier closes the exploit where holding
+Shift and wiggling on your own desk tile raised Standing at no cost.
+
+**Rapport has no passive drift.** It moves only on discrete events, which gives
+it a different character from the other two reputations: management forms an
+impression by watching, peers by remembering.
+
+### The fax machine (M3)
+
+Six unlabeled keys, a legible keypad, two identical trays and an LCD that
+explains nothing. The panel is generated **per run, not per day** (channel
+`fax:panel:v1`), so the label you earned on Monday is still on the key on
+Thursday. Mastery is nine tokens in `RunState.learned`, one per FACT — the token
+records only *that* the player knows; the generator supplies *what* they know,
+so nothing goes stale if `generatePanel` is ever touched.
+
+Two failure modes, one lesson each. A **jam** (wrong tray) costs time and strain
+but never Productivity — you did not un-do work, you made the job take longer,
+and that distinction is the entire "funny, not punishing" bar. A **misdial** (no
+leading 9) transmits successfully, and the bill arrives 25-70 in-game minutes
+later, back at your desk, as a Rapport hit. You learn the 9 the way you learn it
+in a real office.
+
+The machine bills per ACTION, never per real second, through
+`DayDirector.spendMinutes()`. Deliberation is free; decisions are not. Note that
+this could NOT use `DayClock.tick`, which clamps a delta to 250ms — less than one
+game minute — so a loop of `tick(oneMinute)` silently charges a third of what it
+claims. `advanceMinutes()` is the second, explicit mutation point.
 
 ### Persistence
 
@@ -317,7 +360,26 @@ it if you disagree.
     system watched you for eight hours and reported your footsteps. `Work
     completed: —` is both the punchline and the M3 meter slot. Three grey bars
     reading 0/100 would be a placeholder wearing a costume.
-16. **Conditional summary remarks resolve in file order,** first match wins. A
+16. **Every fax job is somebody's paper** — yours, Management's, or a colleague's.
+    This is the cheapest honest answer to "why isn't the dominant strategy just
+    always fax": the tray is a scarce resource allocated across three meters
+    under a time budget, so every job is a two-meter decision and no ordering is
+    free. It needs no NPCs, and the colleague ids become M4's NPC ids.
+17. **Rapport's only M3 consequence is the morning jam.** When colleagues think
+    less of you they stop clearing the machine, so you arrive to somebody else's
+    jam and lose 18 minutes. Without it, "never take a colleague's job" strictly
+    dominates, because Rapport would be a number with no teeth until M4's favor
+    economy exists.
+18. **A per-job busy signal keeps a mastered fax a decision.** Seeded per job, so
+    it is replayable but unknowable in advance, and REDIAL — useless every other
+    day — is exactly the right key when it fires. Without it, a player who knows
+    the panel is executing nine fixed keypresses by day eight, which is data
+    entry with a bar that fills.
+19. **The break room and bathroom have no stress-shedding drift yet.** A priced
+    hiding place IS the fluffing economy, and M5 is what makes hiding risky.
+    Shipping the reward before the risk would be shipping a dominant strategy on
+    purpose. Strain falls overnight and nowhere else at M3.
+20. **Conditional summary remarks resolve in file order,** first match wins. A
     Friday where you never left the cubicle farm gets the "one room" line rather
     than the Friday line. Reorder the `remarks` array in `dayEnd.json` to change
     the priority — that ordering is a writer's decision, not a code one.

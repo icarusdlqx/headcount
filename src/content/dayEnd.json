@@ -1,13 +1,11 @@
 {
   "_comment": "Every string at the day boundary. One file rather than three: a writer tuning the tone of this moment should not have to keep two files in sync. Predicate ids in remarks[].requires must exist in REMARK_PREDICATES in src/ui/daySummaryView.ts — a dev-only assertion checks this at boot.",
-
   "window": {
     "titleFormat": "{weekday} - Daily Activity Summary",
     "heading": "{weekdayLong} — Week {week}",
     "subheading": "9:00 AM – 5:00 PM   ·   Attendance: full",
     "okLabel": "OK"
   },
-
   "rows": {
     "timeOnPremises": "Time on premises",
     "roomsEntered": "Rooms entered",
@@ -15,9 +13,12 @@
     "longestStationary": "Longest period stationary",
     "objectsExamined": "Objects examined",
     "workCompleted": "Work completed",
-    "weekToDate": "Week to date"
+    "weekToDate": "Week to date",
+    "faxesSent": "Transmittals sent",
+    "standing": "Standing with management",
+    "rapport": "Rapport with colleagues",
+    "strain": "Strain"
   },
-
   "values": {
     "hoursMinutes": "{hours} hr {minutes} min",
     "minutes": "{minutes} min",
@@ -26,9 +27,9 @@
     "distanceCovered": "{feet} ft (approx.)",
     "objectsExamined": "{count}",
     "workCompleted": "—",
-    "weekToDate": "{done} of {total} days"
+    "weekToDate": "{done} of {total} days",
+    "faxesSent": "{count}"
   },
-
   "remarks": [
     {
       "id": "neverLeftFarm",
@@ -79,7 +80,6 @@
       ]
     }
   ],
-
   "weekend": [
     "Saturday. You did four loads of laundry and thought about the fax machine twice.",
     "You went to a hardware store for one item and left with that item.",
@@ -89,9 +89,10 @@
     "The weekend passed without incident and without remark.",
     "Sunday evening arrived at 4:00 PM, as it does."
   ],
-
   "morning": {
-    "first": ["9:00 AM. Monday. Your monitor faces the aisle."],
+    "first": [
+      "9:00 AM. Monday. Your monitor faces the aisle."
+    ],
     "monday": [
       "Monday, 9:00 AM. The building smells like carpet again.",
       "Monday, 9:00 AM. There is a new memo in your tray. It is the old memo."
@@ -102,7 +103,6 @@
       "{weekdayLong}, 9:00 AM. Someone has moved the good chair. It is not your chair."
     ]
   },
-
   "notices": {
     "save.unavailable": "Corporate is not recording your progress. This browser declines to keep records.",
     "save.quota": "Storage is full. Your day still happened. There is simply no record of it.",

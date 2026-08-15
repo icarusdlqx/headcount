@@ -49,7 +49,7 @@ export class DayEndScene extends Phaser.Scene {
     // sixth argument of add.rectangle is fillAlpha, not alpha: passing 0 there
     // makes the rectangle permanently invisible however much you tween alpha.
     this.dim = this.add
-      .rectangle(0, 0, width, height - HUD_LAYOUT.barHeight, 0x000000)
+      .rectangle(0, 0, width, height - HUD_LAYOUT.chromeHeight, 0x000000)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(0)
@@ -64,6 +64,7 @@ export class DayEndScene extends Phaser.Scene {
       director.rng(`day:${this.info.dayIndex}:summary`),
       weekdayShort,
       weekdayLong,
+      director.meters,
     );
 
     this.dialog = this.buildDialog();
@@ -114,7 +115,7 @@ export class DayEndScene extends Phaser.Scene {
     const h = remarkTop + 46 + WIN95.buttonH + WIN95.pad;
 
     const x = Math.round((BALANCE.view.width - w) / 2);
-    const y = Math.round((BALANCE.view.height - HUD_LAYOUT.barHeight - h) / 2);
+    const y = Math.round((BALANCE.view.height - HUD_LAYOUT.chromeHeight - h) / 2);
     const container = this.add.container(x, y).setDepth(10);
 
     const g = this.add.graphics();
@@ -145,7 +146,19 @@ export class DayEndScene extends Phaser.Scene {
       const rowY = rowsTop + index * WIN95.rowH;
       const label = this.add.text(labelX, rowY, row.label, UI_FONT).setResolution(1);
       const value = this.add.text(valueRight, rowY, row.value, UI_FONT).setResolution(1).setOrigin(1, 0);
-      drawLeaderDots(g, labelX + label.width + 4, valueRight - value.width - 4, rowY + 9);
+
+      if (row.bar === undefined) {
+        drawLeaderDots(g, labelX + label.width + 4, valueRight - value.width - 4, rowY + 9);
+      } else {
+        // A meter row draws the same segmented well the HUD uses, so the two
+        // read as the same instrument rather than two different scales.
+        const wellW = 120;
+        const wellX = valueRight - value.width - 10 - wellW;
+        drawBevel(g, wellX, rowY + 2, wellW, 11, { style: 'in' });
+        g.fillStyle(PALETTE.win95Title, 1);
+        const chunks = Math.round(Math.max(0, Math.min(1, row.bar)) * 14);
+        for (let c = 0; c < chunks; c++) g.fillRect(wellX + 2 + c * 8, rowY + 4, 6, 7);
+      }
       container.add([label, value]);
     });
 

@@ -112,6 +112,26 @@ export class DayClock {
   }
 
   /**
+   * Charge N whole in-game minutes without consuming real time.
+   *
+   * NOT tick(): tick clamps deltaMs to maxTickDeltaMs (250ms), which is LESS than
+   * one game minute (687.5ms), so a loop of tick(MS_PER_GAME_MINUTE) advances
+   * 250ms per call and silently charges about a third of what it claims. This is
+   * the only other mutation point. It emits the same contiguous, ordered run of
+   * MINUTE events tick() would, and it leaves the sub-minute accumulator alone so
+   * the fraction in flight is neither lost nor double-counted.
+   */
+  advanceMinutes(count: number): void {
+    const whole = Math.max(0, Math.trunc(count));
+    for (let i = 0; i < whole; i++) {
+      if (this.isOver) break;
+      this.currentMinute += 1;
+      this.onMinute(this.currentMinute);
+    }
+    if (this.isOver) this.accumulatorMs = 0;
+  }
+
+  /**
    * Back to 9:00 AM. Called by DayDirector.beginDay() — without it, tick()
    * no-ops forever after the first day and day 2 never advances.
    */

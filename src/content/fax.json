@@ -1,0 +1,129 @@
+{
+  "_comment": "The OMNITEL FX-220. The lcd.terse map is what the machine says by default; lcd.verbose is what the SPEAKER key makes it say out loud, which is materially easier to read and audible to the entire floor. Every code here must exist in both maps. Recipient and colleague display names are keyed by the stable ids in src/sim/faxTray.ts — add a name there, not here, or a replayed day changes who owned which job.",
+  "window": {
+    "title": "Fax Machine - Properties",
+    "model": "OMNITEL FX-220",
+    "trayNote": "USE OTHER TRAY",
+    "coverTitle": "TRANSMITTAL",
+    "coverFax": "Fax: {ext}",
+    "coverFaxLearned": "Fax: 9-{ext}",
+    "coverFrom": "From: {owner}",
+    "hint": "Keys: Q W E / A S D   ·   0-9 dial   ·   Enter send   ·   T tray   ·   Esc stop"
+  },
+  "lcd": {
+    "terse": {
+      "ready": "READY",
+      "noDoc": "NO DOC",
+      "noLine": "NO LINE",
+      "noNumber": "NO NUMBER",
+      "alreadyLine": "LINE IN USE",
+      "lineOk": "LINE OK",
+      "docLoaded": "DOC {n}",
+      "dialing": "{digits}",
+      "fineOn": "FINE",
+      "fineOff": "STD",
+      "copying": "COPY {n}",
+      "redialEmpty": "NO LAST NO.",
+      "speakerOn": "SPKR ON",
+      "speakerOff": "SPKR OFF",
+      "busy": "E-11",
+      "jam": "E-04",
+      "jamHint": "CHECK FEED TRAY",
+      "jamForeign": "E-04",
+      "ok": "OK - 00:31",
+      "cancelled": "CANCELLED",
+      "checkTray": "TRAY {n}"
+    },
+    "verbose": {
+      "ready": "Ready.",
+      "noDoc": "There is no document.",
+      "noLine": "There is no outside line.",
+      "noNumber": "No number has been entered.",
+      "alreadyLine": "The line is already open.",
+      "lineOk": "Outside line seized.",
+      "docLoaded": "Document {n} loaded.",
+      "dialing": "Dialling {digits}.",
+      "fineOn": "Fine resolution.",
+      "fineOff": "Standard resolution.",
+      "copying": "Photocopying. Copy {n}.",
+      "redialEmpty": "No previous number today.",
+      "speakerOn": "Speaker on.",
+      "speakerOff": "Speaker off.",
+      "busy": "The receiving line is engaged.",
+      "jam": "Paper jam. Open the feeder door.",
+      "jamHint": "Paper jam. Check the feed tray selection.",
+      "jamForeign": "Paper jam. This one is not yours.",
+      "ok": "Transmission complete. Thirty-one seconds.",
+      "cancelled": "Cancelled.",
+      "checkTray": "Feed tray {n} selected."
+    }
+  },
+  "recipients": {
+    "regional": "Regional (Portland)",
+    "accounts": "Accounts Payable",
+    "legal": "Legal — 4th Floor",
+    "warehouse": "Warehouse 2",
+    "vendor": "Vendor Services",
+    "branch": "Branch Office"
+  },
+  "colleagues": {
+    "steve": "Steve",
+    "marjorie": "Marjorie",
+    "dennis": "Dennis",
+    "pat": "Pat"
+  },
+  "owners": {
+    "yours": "you",
+    "boss": "Management",
+    "colleague": "{name}"
+  },
+  "tray": {
+    "yours": [
+      "Your transmittal. Nobody is waiting for it.",
+      "Yours. It has been in the tray since Tuesday."
+    ],
+    "boss": [
+      "Management left this on your chair.",
+      "From the corner office. Marked URGENT in pencil."
+    ],
+    "colleague": [
+      "{name} asked if you were going that way anyway.",
+      "{name} left this on your desk with a Post-it. The Post-it says thanks."
+    ]
+  },
+  "outcome": {
+    "sent": [
+      "Sent. Somewhere, a machine has printed it and nobody has looked at it yet.",
+      "Transmitted. The confirmation slip prints itself, which is the only acknowledgement you will get."
+    ],
+    "sentBoss": [
+      "Sent on behalf of Management. This has been noticed."
+    ],
+    "sentColleague": [
+      "Sent for {name}, who will remember this for about a week."
+    ],
+    "misdialed": [
+      "Sent. The machine is pleased with itself."
+    ],
+    "abandoned": [
+      "You left it. The paper is still in the tray, and so is the problem."
+    ],
+    "jamLeft": [
+      "You left it jammed. Somebody will find it."
+    ],
+    "misdialReply": [
+      "{dept} has received your transmittal. {dept} has questions.",
+      "{dept} rang. They have your transmittal and they would like to know why."
+    ],
+    "foreignJamCleared": [
+      "Somebody jammed it and walked away. You cleared it. Nobody saw."
+    ]
+  },
+  "departments": [
+    "Accounting",
+    "Legal",
+    "Warehouse 2",
+    "the Portland office",
+    "Vendor Services"
+  ]
+}

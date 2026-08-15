@@ -15,6 +15,8 @@ export interface DayStats {
   objectsExamined: number;
   longestStationaryMs: number;
   stationaryRunMs: number;
+  faxSent: number;
+  faxJams: number;
 }
 
 /** One committed workday. Feeds the Friday review in M7. */
@@ -24,6 +26,9 @@ export interface DayRecord {
   distanceFt: number;
   roomsEntered: number;
   objectsExamined: number;
+  /** The day's final Productivity. M7 averages five of these. */
+  productivity: number;
+  faxSent: number;
 }
 
 export interface RunState {
@@ -52,6 +57,8 @@ export function createDayStats(): DayStats {
     objectsExamined: 0,
     longestStationaryMs: 0,
     stationaryRunMs: 0,
+    faxSent: 0,
+    faxJams: 0,
   };
 }
 
@@ -63,6 +70,8 @@ export function resetStats(stats: DayStats): void {
   stats.objectsExamined = 0;
   stats.longestStationaryMs = 0;
   stats.stationaryRunMs = 0;
+  stats.faxSent = 0;
+  stats.faxJams = 0;
 }
 
 /** A defensive DEEP copy. The live stats are reset mid-transition, while the
@@ -75,6 +84,8 @@ export function copyStats(stats: DayStats): DayStats {
     objectsExamined: stats.objectsExamined,
     longestStationaryMs: stats.longestStationaryMs,
     stationaryRunMs: stats.stationaryRunMs,
+    faxSent: stats.faxSent,
+    faxJams: stats.faxJams,
   };
 }
 
@@ -162,5 +173,7 @@ export function makeDayRecord(state: RunState, stats: DayStats, feetPerTile: num
     distanceFt: Math.round((stats.distancePx / tileSize) * feetPerTile),
     roomsEntered: stats.roomsEntered.length,
     objectsExamined: stats.objectsExamined,
+    productivity: Math.round(state.meters['productivity'] ?? 0),
+    faxSent: stats.faxSent,
   };
 }

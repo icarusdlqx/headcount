@@ -18,6 +18,8 @@ const record = (dayIndex: number) => ({
   distanceFt: 100,
   roomsEntered: 3,
   objectsExamined: 2,
+  productivity: 55,
+  faxSent: 1,
 });
 
 describe('week arithmetic', () => {

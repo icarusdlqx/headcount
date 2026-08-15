@@ -1,5 +1,6 @@
 import { BALANCE } from '../config/balance';
 import { createRunState, type DayRecord, type RunState } from '../sim/DayState';
+import { TRANSIENT_METERS, sanitiseMeters } from '../sim/meters';
 
 /**
  * The save blob, and the reader that survives whatever is actually in the key.
@@ -52,7 +53,9 @@ export function toSave(state: RunState, now: number): SaveV1 {
     daysAbandoned: clampInt(state.daysAbandoned, 0, Number.MAX_SAFE_INTEGER, 0),
     savedAt: now,
     week: state.week.slice(-BALANCE.save.maxWeekRecords),
-    meters: capRecord(state.meters, BALANCE.save.maxMeterEntries),
+    // Transient meters are filtered out here rather than at the call site, so
+    // there is exactly one place that decides what a save contains.
+    meters: capRecord(state.meters, BALANCE.save.maxMeterEntries, TRANSIENT_METERS),
     flags: capRecord(state.flags, BALANCE.save.maxFlagEntries),
     // Deduped and sorted at write time so the blob cannot creep toward a real
     // quota error one fax sequence at a time.
@@ -68,6 +71,10 @@ export function applySave(save: SaveV1): RunState {
   for (const key of Object.keys(save.meters)) {
     base.meters[key] = save.meters[key]!;
   }
+
+  // Repairs a hand-edited save and gives Visibility its morning reading, which
+  // is never in the blob.
+  sanitiseMeters(base.meters);
 
   base.dayIndex = save.dayIndex;
   base.openDay = save.openDay;
@@ -162,18 +169,23 @@ function clampNum(value: unknown, min: number, max: number, fallback: number): n
 
 /** Keys that must never be copied out of parsed data onto an object. */
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
 
 /**
  * Accumulates onto a null-prototype object and skips the dangerous keys.
  * JSON.parse itself is safe; the danger is everything downstream of it. Never
  * Object.assign or spread parsed data over a defaults object.
  */
-function capRecord(source: Record<string, number>, max: number): Record<string, number> {
+function capRecord(
+  source: Record<string, number>,
+  max: number,
+  exclude: ReadonlySet<string> = EMPTY_SET,
+): Record<string, number> {
   const out: Record<string, number> = Object.create(null) as Record<string, number>;
   let count = 0;
   for (const key of Object.keys(source)) {
     if (count >= max) break;
-    if (FORBIDDEN_KEYS.has(key)) continue;
+    if (FORBIDDEN_KEYS.has(key) || exclude.has(key)) continue;
     const value = source[key];
     if (typeof value !== 'number' || !Number.isFinite(value)) continue;
     out[key] = value;
@@ -222,6 +234,9 @@ function coerceWeek(value: unknown, max: number): DayRecord[] {
       distanceFt: clampInt(record['distanceFt'], 0, 1_000_000, 0),
       roomsEntered: clampInt(record['roomsEntered'], 0, 999, 0),
       objectsExamined: clampInt(record['objectsExamined'], 0, 99_999, 0),
+      // Defaulted to 0 for a record written by the M2 build, which had neither.
+      productivity: clampInt(record['productivity'], BALANCE.meters.min, BALANCE.meters.max, 0),
+      faxSent: clampInt(record['faxSent'], 0, 999, 0),
     });
   }
   return out;

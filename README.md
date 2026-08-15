@@ -10,9 +10,9 @@ rendered entirely in beige.
 **Play it:** <https://headcount.ligand-ave.workers.dev> — published from `main`
 on every push.
 
-**Status:** M2 — the office exists, and the workday now runs 9-to-5 in about five
-and a half minutes, ends with a Daily Activity Summary, and carries over Monday
-to Friday with a save. See [DESIGN.md](DESIGN.md) for the full spec, the
+**Status:** M3 — the workday runs 9-to-5 in about five and a half minutes, you
+have five meters and real work to do, and the fax machine does not have labels on
+its keys. See [DESIGN.md](DESIGN.md) for the full spec, the
 milestone roadmap, and the running list of assumptions.
 
 ---
@@ -45,7 +45,9 @@ Then open http://localhost:5173.
 | --- | --- |
 | Arrows / WASD | Walk |
 | Shift | Walk with purpose (nobody runs here) |
-| E or Space | Look at whatever you are facing |
+| E or Space | Use the fax machine, or look at whatever you are facing |
+| Q W E / A S D | The fax machine's six function keys (at the machine) |
+| 0-9 / Enter / T / Esc | Dial · send · flip tray · give up |
 | Enter / Space / Esc | Dismiss the end-of-day summary |
 
 ### Dev flags

@@ -104,6 +104,7 @@ export function buildDayEndView(
   rng: Rng,
   weekdayShort: string,
   weekdayLong: string,
+  meters: Readonly<Record<string, number>> = {},
 ): DayEndView {
   const vars = varsFor(info);
   const rows = CONTENT.rows;
@@ -123,9 +124,29 @@ export function buildDayEndView(
       { label: rows['distanceCovered']!, value: fill(values['distanceCovered']!, vars) },
       { label: rows['longestStationary']!, value: String(vars['stationary']) },
       { label: rows['objectsExamined']!, value: fill(values['objectsExamined']!, vars) },
-      // The punchline row and the M3 slot in one object. An empty meter frame
-      // reading 0/100 would be a placeholder wearing a costume.
-      { label: rows['workCompleted']!, value: values['workCompleted']! },
+      // Was the punchline row and the meter slot in one object. M3 fills it:
+      // `bar` renders a sunken progress well instead of a value string.
+      {
+        label: rows['workCompleted']!,
+        value: String(Math.round(meters['productivity'] ?? 0)),
+        bar: (meters['productivity'] ?? 0) / BALANCE.meters.max,
+      },
+      { label: rows['faxesSent']!, value: fill(values['faxesSent']!, { count: info.stats.faxSent }) },
+      {
+        label: rows['standing']!,
+        value: String(Math.round(meters['bossApproval'] ?? 0)),
+        bar: (meters['bossApproval'] ?? 0) / BALANCE.meters.max,
+      },
+      {
+        label: rows['rapport']!,
+        value: String(Math.round(meters['coworkerRep'] ?? 0)),
+        bar: (meters['coworkerRep'] ?? 0) / BALANCE.meters.max,
+      },
+      {
+        label: rows['strain']!,
+        value: String(Math.round(meters['stress'] ?? 0)),
+        bar: (meters['stress'] ?? 0) / BALANCE.meters.max,
+      },
       { label: rows['weekToDate']!, value: fill(values['weekToDate']!, { done: info.weekSoFar, total: BALANCE.week.daysPerWeek }) },
     ],
     remark: pickRemark(info, rng),

@@ -3,6 +3,8 @@ import { PALETTE } from '../art/palette';
 import { BALANCE } from '../config/balance';
 import { UI_FONT, drawBevel } from './Win95';
 import { formatClock } from './format';
+import { MeterBar } from './MeterBar';
+import { METER, METER_KEYS, type MeterKey } from '../sim/meters';
 import hudContent from '../content/hud.json';
 
 /**
@@ -18,7 +20,8 @@ interface HudContent {
   meridiem: string[];
   timeFormat: string;
   lunch: string;
-  hint: string;
+  hints: { base: string; atFax: string; faxDone: string; faxLate: string };
+  meters: Record<string, string>;
   roomUnknown: string;
 }
 
@@ -27,6 +30,13 @@ export const HUD_TEXT = hudContent as HudContent;
 /** Layout geometry lives here, beside the code that draws it. */
 export const HUD_LAYOUT = {
   barHeight: 24,
+  /** The meter tray sits directly on top of the status bar, separated by a groove
+   *  so the two read as one object (the system) rather than two widgets. */
+  meterTrayHeight: 34,
+  /** Everything above the chrome measures off THIS, never off barHeight — the
+   *  message panel used to be positioned off the bar and ended up drawn straight
+   *  through the meters. */
+  chromeHeight: 58,
   messageHeight: 40,
   paneGap: 3,
   roomPaneX: 3,
@@ -43,6 +53,7 @@ export class Hud {
   private readonly timeText: Phaser.GameObjects.Text;
   private readonly messageText: Phaser.GameObjects.Text;
   private readonly messagePanel: Phaser.GameObjects.Graphics;
+  private readonly meterBars: { key: MeterKey; bar: MeterBar }[] = [];
   private messageTimer?: Phaser.Time.TimerEvent;
 
   /** Diff guards. setText re-rasterises a canvas and re-uploads a GPU texture,
@@ -54,12 +65,14 @@ export class Hud {
     this.scene = scene;
     const { width, height } = BALANCE.view;
     const barY = height - HUD_LAYOUT.barHeight;
+    const trayY = height - HUD_LAYOUT.chromeHeight;
     const clockPaneX = width - HUD_LAYOUT.paneGap - HUD_LAYOUT.clockPaneW;
     const hintPaneW = clockPaneX - HUD_LAYOUT.paneGap - HUD_LAYOUT.hintPaneX;
     const paneY = barY + 4;
     const paneH = HUD_LAYOUT.barHeight - 8;
 
     const bar = scene.add.graphics().setScrollFactor(0).setDepth(1000);
+    drawBevel(bar, 0, trayY, width, HUD_LAYOUT.meterTrayHeight);
     drawBevel(bar, 0, barY, width, HUD_LAYOUT.barHeight);
     drawBevel(bar, HUD_LAYOUT.roomPaneX, paneY, HUD_LAYOUT.roomPaneW, paneH, { style: 'in' });
     drawBevel(bar, HUD_LAYOUT.hintPaneX, paneY, hintPaneW, paneH, { style: 'in' });
@@ -69,7 +82,7 @@ export class Hud {
     const textY = barY + 7;
     this.roomText = this.label(8, textY);
     this.hintText = this.label(HUD_LAYOUT.hintPaneX + 5, textY);
-    this.hintText.setText(HUD_TEXT.hint);
+    this.hintText.setText(HUD_TEXT.hints.base);
 
     // Two anchors rather than one concatenated string: MS Sans Serif is
     // proportional, so a single left-aligned string makes AM/PM jump sideways
@@ -77,7 +90,9 @@ export class Hud {
     this.dayText = this.label(clockPaneX + 6, textY);
     this.timeText = this.label(clockPaneX + HUD_LAYOUT.clockPaneW - 6, textY).setOrigin(1, 0);
 
-    const msgY = barY - HUD_LAYOUT.messageHeight - 6;
+    // Measured off the whole chrome, not the status bar: at 34px of meters the
+    // old formula put the panel straight through the first three of them.
+    const msgY = height - HUD_LAYOUT.chromeHeight - HUD_LAYOUT.messageHeight - 6;
     this.messagePanel = scene.add.graphics().setScrollFactor(0).setDepth(1000).setVisible(false);
     drawBevel(this.messagePanel, 8, msgY, width - 16, HUD_LAYOUT.messageHeight);
 
@@ -87,6 +102,30 @@ export class Hud {
       .setDepth(1001)
       .setVisible(false)
       .setResolution(1);
+
+    this.buildMeters(scene, trayY);
+  }
+
+  /** Five equal cells across the tray. Stress is drawn inverted because high is
+   *  bad; every bar also prints its number, so colour is never the only signal. */
+  private buildMeters(scene: Phaser.Scene, trayY: number): void {
+    const { width } = BALANCE.view;
+    const pad = 3;
+    const gap = 3;
+    const cells = METER_KEYS.length;
+    const cellW = Math.floor((width - pad * 2 - gap * (cells - 1)) / cells);
+
+    METER_KEYS.forEach((key, index) => {
+      const x = pad + index * (cellW + gap);
+      const label = HUD_TEXT.meters[key] ?? key;
+      const bar = new MeterBar(scene, x, trayY + 4, cellW, label, { inverted: key === METER.stress });
+      this.meterBars.push({ key, bar });
+    });
+  }
+
+  /** Safe to call every frame — each bar diff-guards its own redraw. */
+  setMeters(meters: Record<string, number>): void {
+    for (const { key, bar } of this.meterBars) bar.set(meters[key] ?? 0);
   }
 
   private label(x: number, y: number): Phaser.GameObjects.Text {
