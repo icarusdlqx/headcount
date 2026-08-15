@@ -13,6 +13,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<'up' | 'down' | 'left' | 'right' | 'purpose', Phaser.Input.Keyboard.Key>;
   private facingDir: CharDirection = 'down';
+  private frozen = false;
 
   /** Reused every frame so movement allocates nothing in the hot loop. */
   private readonly move = new Phaser.Math.Vector2();
@@ -75,6 +76,34 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   /**
+   * Stop accepting input. Needed because Player polls key.isDown rather than
+   * listening for events: a player holding Right when the clock hits five would
+   * otherwise keep walking behind the summary dialog.
+   */
+  setFrozen(frozen: boolean): void {
+    this.frozen = frozen;
+    if (!frozen) return;
+    (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    this.anims.play(`idle-${this.facingDir}`, true);
+  }
+
+  /**
+   * Teleport for the morning reset.
+   *
+   * body.reset(), not setPosition(): reset sets the position AND the previous
+   * position. Without it the Arcade separation pass sees a 40-tile apparent
+   * movement and can shove the feet-box through the adjacent partition — and the
+   * cubicle spawn is one tile from a cubicle wall.
+   */
+  placeAt(tileX: number, tileY: number, facing: CharDirection): void {
+    const size = BALANCE.view.tileSize;
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    this.facingDir = facing;
+    body.reset(tileX * size + size / 2, tileY * size + size / 2);
+    this.anims.play(`idle-${facing}`, true);
+  }
+
+  /**
    * Tile the player is standing on. Measured from the feet-box, not the sprite
    * centre — the sprite is taller than a tile, so its centre reads as the tile
    * in front of the one actually being stood on.
@@ -87,6 +116,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   override preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
+
+    if (this.frozen) {
+      (this.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      return;
+    }
 
     const left = this.cursors.left.isDown || this.wasd.left.isDown;
     const right = this.cursors.right.isDown || this.wasd.right.isDown;

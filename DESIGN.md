@@ -155,8 +155,8 @@ the break room only.
 | # | Scope | Status |
 | --- | --- | --- |
 | M1 | Skeleton: Vite + Phaser + TS boots; player moves on an office tilemap with collision; deployable | **Done** |
-| M2 | Day loop: clock, day advance, end-of-day summary, `localStorage` save/load | Next |
-| M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | |
+| M2 | Day loop: clock, day advance, end-of-day summary, `localStorage` save/load | **Done** |
+| M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | Next |
 | M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | |
 | M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | |
 | M6 | Printer Jam, Dial-Up + IT favor sink | |
@@ -206,6 +206,52 @@ can overlap furniture and corners feel forgiving. Tile lookups use the body
 centre, not the sprite centre — the sprite is taller than a tile, so its centre
 reads as the tile in front of the one being stood on.
 
+### The day loop (M2)
+
+`src/sim/` is pure — no Phaser, no DOM, no wall clock — except `DayDirector`,
+which owns the composition and needs an event emitter.
+
+- **`DayClock`** is a fixed-timestep accumulator. It emits exactly one discrete
+  in-game minute per 687.5 real ms, so a day is always 480 minute-events whatever
+  the frame rate. **State changes and RNG draws hang off the discrete minute;
+  only presentation reads the continuous float.** A per-frame `rng.chance()`
+  would make a 144Hz machine play a different day from a 60Hz one — invisible in
+  a playtest on one laptop, and unfixable by seed once saves are in the wild.
+- **`DayDirector` owns the clock lifecycle**, not `DayState`. `DayState` is pure
+  and knows nothing about the clock, so advancing a day through the pure function
+  alone would leave the clock parked past five and day two would never tick.
+  Game code calls `director.beginDay()`, never the pure `beginDay()`.
+- **`PauseStack`** is a named-reason `Set`, not a boolean and not a refcount. The
+  case that decides it: the player alt-tabs while the summary is up. A boolean
+  resumes the clock behind a still-visible modal.
+- **Nothing calls `scene.pause()` on Office by hand.** Office listens for
+  `CLOCK_HELD`/`CLOCK_RELEASED` and derives its own pause from the stack's
+  modality. Every caller says `director.hold(reason)` and nothing else. This is
+  what lets M4's in-scene dialogue stop time without pausing the scene, while
+  M3's minigames stop both, through one mechanism.
+- **`DayEndScene` owns every tween in the transition**, because Office is paused
+  for most of it and a paused scene's tweens do not advance.
+
+### Persistence
+
+`src/save/` is the only place that knows about `localStorage`, behind a
+four-method `StorageBackend` that degrades to an in-memory map when storage is
+absent, blocked, or full — the game stays playable when saving is impossible.
+
+Reading is **repair-shaped, not reject-shaped**: one `NaN` in `meters` must not
+cost the player their week. The one case where refusing is correct is a save
+written by a *newer* build, which is left byte-identical in storage rather than
+downgraded.
+
+**The version-bump ritual:** copy the current schema to a frozen `vN`, add a step
+to `MIGRATIONS`, **capture a fixture written by the outgoing build**, then
+repoint the current type. Skipping the fixture is how migrations rot unnoticed.
+Migrations **inline their own literal constants and never import `BALANCE`** — if
+a migration defaulted a meter to `BALANCE.meters.startStress` and a designer
+retuned it in March, the same save would migrate to different values on the
+February and March builds. That is the one sanctioned exception to the
+balance-file rule, and it is commented in both files.
+
 ---
 
 ## Assumptions
@@ -232,11 +278,46 @@ it if you disagree.
    before M3 needs it. Reassign freely.
 7. **Shift = "walk with purpose"** rather than run. Faster, but slightly absurd,
    and it gives Visibility something to react to later.
-8. **The day seed comes from the calendar date** unless `?seed=` overrides it, so
-   a bug report of "Tuesday, the fax exploded" is reproducible.
-9. **No test framework yet.** M1 was verified by driving the running game
-   (BFS pathfinding to all eight rooms through real collision). A proper harness
-   is worth adding when the minigames land in M3, since their state machines are
-   the first thing genuinely worth unit-testing.
+8. **The run seed is date-derived only on FIRST boot,** then persisted in the
+   save. Precedence is `?seed=` > saved seed > date. *Amended in M2:* it used to
+   re-derive on every boot, which was wrong in a way that only bites once saving
+   exists — the derivation is UTC, so a player west of Greenwich crosses the
+   boundary mid-afternoon and a resumed game would silently become a different
+   game. A pinned `?seed=` is a **scratch run**: nothing is read, written, or
+   cleared, so replaying a seed cannot clobber a real week.
+9. **Vitest, added in M2** rather than M3 as originally planned. The trigger moved
+   earlier because M2's bugs are the invisible kind — a day-rollover off-by-one, a
+   `hour % 12` rendering "0:00 PM", a coerce path that drops a week. None show up
+   in a five-minute playtest. The sim, save and format modules were written
+   Phaser-free and DOM-free anyway, so the coverage cost a config file.
+   **`npm run build` deliberately does NOT run the tests** — the build gates the
+   Cloudflare deploy, and that is a bigger decision than a test harness. Run
+   `npm test` yourself, or add `vitest run` to the build script if you want a
+   failing test to block a deploy.
 10. **No sound in M1.** Audio starts in M9 per the build order, but the
     fluorescent hum is the obvious early exception if the office feels dead.
+11. **Resuming starts at the BEGINNING of the saved day,** replaying that day's
+    seed. Losing up to five and a half minutes is the right trade against
+    serialising player position, room-visit sets and an in-flight minigame — a
+    surface that would grow and need migrating every milestone. It also makes
+    quitting to dodge a bad outcome worthless in both directions, since
+    uncommitted progress was never committed.
+12. **The save stores no player position and no tile coordinates,** only symbolic
+    keys, because the ASCII map is expected to be edited. A saved position plus an
+    edited map spawns you inside a wall with no in-game escape.
+13. **One RNG stream per purpose, never one per scene.** Channels are derived as
+    `hashSeed(seed|channel)`. Otherwise a player who examines eleven things before
+    lunch gets a different afternoon from one who examines two.
+14. **`SAVE_KEY`, the schema version and all layout geometry live with their code,
+    not in `balance.ts`.** That file holds numbers a designer can safely retune; a
+    storage key and a schema version are code contracts whose "retuning" orphans
+    every save.
+15. **The end-of-day summary reports walking distance and rooms entered** rather
+    than stubbed meters. Every value is real at M2, and the joke is real: the
+    system watched you for eight hours and reported your footsteps. `Work
+    completed: —` is both the punchline and the M3 meter slot. Three grey bars
+    reading 0/100 would be a placeholder wearing a costume.
+16. **Conditional summary remarks resolve in file order,** first match wins. A
+    Friday where you never left the cubicle farm gets the "one room" line rather
+    than the Friday line. Reorder the `remarks` array in `dayEnd.json` to change
+    the priority — that ordering is a writer's decision, not a code one.

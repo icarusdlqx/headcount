@@ -10,8 +10,10 @@ rendered entirely in beige.
 **Play it:** <https://headcount.ligand-ave.workers.dev> — published from `main`
 on every push.
 
-**Status:** M1 (skeleton) — the office exists and you can walk around it.
-See [DESIGN.md](DESIGN.md) for the full spec and the milestone roadmap.
+**Status:** M2 — the office exists, and the workday now runs 9-to-5 in about five
+and a half minutes, ends with a Daily Activity Summary, and carries over Monday
+to Friday with a save. See [DESIGN.md](DESIGN.md) for the full spec, the
+milestone roadmap, and the running list of assumptions.
 
 ---
 
@@ -33,6 +35,7 @@ Then open http://localhost:5173.
 | --- | --- |
 | `npm run dev` | Vite dev server with hot reload |
 | `npm run build` | Typecheck, then build to `dist/` |
+| `npm test` | Vitest — clock, day/week rollover, save round-trip and repair |
 | `npm run preview` | Serve the production build locally |
 | `npm run typecheck` | `tsc --noEmit` on its own |
 
@@ -43,18 +46,23 @@ Then open http://localhost:5173.
 | Arrows / WASD | Walk |
 | Shift | Walk with purpose (nobody runs here) |
 | E or Space | Look at whatever you are facing |
+| Enter / Space / Esc | Dismiss the end-of-day summary |
 
 ### Dev flags
 
 Append to the URL:
 
-- `?debug=1` — FPS, tile coordinates and the active RNG seed, top-left
-- `?seed=1234` — pin the daily RNG seed so a day replays identically
+- `?debug=1` — FPS, tile coords, clock minute, day, pause reasons and the seed
+- `?seed=1234` — pin the RNG seed. This also makes it a **scratch run**: nothing
+  is loaded, saved or cleared, so replaying a seed can't clobber a real week
+- `?timescale=12` — burn through days fast. Requires `?debug=1`
+- `L` (with `?debug=1`) — end the current day immediately
 
-Without `?seed`, the seed is derived from the calendar date, so everyone playing
-on the same day gets the same office nonsense.
+The seed is derived from the calendar date on first boot and then persisted, so a
+run stays replayable across sessions.
 
-In dev builds the running game is exposed as `window.game` for console poking.
+In dev builds the game is exposed as `window.game`, plus
+`window.headcount.wipeSave()` and `window.headcount.dumpSave()`.
 
 ---
 
@@ -85,14 +93,20 @@ Full details, including caching and deploying without pushing, are in
 src/
   main.ts              Phaser game config and entry point
   config/balance.ts    EVERY tunable number. Designers live here.
-  content/             Dialogue and event text as JSON. Writers live here.
-  scenes/              Boot, Office (day loop, meters and minigames land here)
+  content/             Dialogue, summary and event text as JSON. Writers live here.
+  sim/                 Clock, day/week state, pause stack, events. Pure logic.
+  save/                Schema, coercion, storage backend, save service.
+  scenes/              Boot, Office, DayEnd
   entities/            Player, and later the NPCs
   world/               ASCII office map, tile vocabulary, room bounds
   art/                 Palette and the procedural placeholder art
-  ui/                  Windows 95 chrome and the HUD
-  util/                Seeded RNG
+  ui/                  Windows 95 chrome, HUD, formatting, summary view-model
+  util/                Seeded RNG and URL flags
 ```
+
+`src/sim` and `src/save` import nothing from Phaser or the DOM, which is what
+makes them testable in plain node — and what keeps the rules about determinism
+enforceable rather than aspirational.
 
 Two rules keep the project tunable by two people at once:
 

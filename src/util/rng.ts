@@ -66,16 +66,37 @@ export function hashSeed(text: string): number {
 }
 
 /**
- * The run seed. `?seed=1234` pins it; otherwise it is derived from the calendar
- * date so a given day plays the same for everyone, which makes bug reports
- * ("Tuesday, the fax exploded") reproducible.
+ * The run seed.
+ *
+ * Precedence: ?seed= > the saved seed > the calendar date. The date derivation
+ * happens exactly ONCE, on first boot, after which the seed is a persisted fact.
+ *
+ * It used to re-derive from the date on every boot, which was wrong in a way that
+ * only bites after saving exists: the derivation is UTC, so a US-Pacific player
+ * crosses the boundary at 5pm local — mid-session — and a resumed game would have
+ * silently become a different game.
  */
-export function resolveRunSeed(search: string = globalThis.location?.search ?? ''): number {
-  const param = new URLSearchParams(search).get('seed');
-  if (param !== null && param.trim() !== '') {
-    const parsed = Number(param);
+export function resolveRunSeed(pinned: string | null, savedSeed: number | null): number {
+  if (pinned !== null && pinned.trim() !== '') {
+    const parsed = Number(pinned);
     if (Number.isFinite(parsed)) return Math.floor(parsed) >>> 0;
-    return hashSeed(param);
+    return hashSeed(pinned);
   }
+  if (savedSeed !== null && Number.isFinite(savedSeed)) return savedSeed >>> 0;
   return hashSeed(new Date().toISOString().slice(0, 10));
+}
+
+/**
+ * An independent stream per purpose. ONE STREAM PER PURPOSE, NEVER ONE PER SCENE.
+ *
+ * The failure this prevents: a scene-wide stream shared between the day loop and
+ * the E-key flavour text means a player who examines eleven things before lunch
+ * gets a different afternoon from one who examines two. Harmless for flavour
+ * today; fatal the moment M3 adds an event roll, and by then the saves that
+ * reproduce the bug are already in the wild.
+ *
+ * Returns a FRESH stream every call, so a view can be rebuilt identically.
+ */
+export function deriveRng(runSeed: number, channel: string): Rng {
+  return makeRng(hashSeed(`${runSeed}|${channel}`));
 }

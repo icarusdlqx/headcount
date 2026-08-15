@@ -105,14 +105,19 @@ export const ROOMS: readonly RoomRect[] = [
   { name: 'The corridor', x1: 11, y1: 1, x2: 30, y2: 28 },
 ];
 
-/** Which room a tile belongs to. Returns a deadpan fallback for the outer walls. */
-export function roomAt(tileX: number, tileY: number): string {
+/**
+ * Which room a tile belongs to. The fallback is passed in rather than written
+ * here: it is prose, and prose lives in src/content/. The ROOMS names above are
+ * the deliberate exception — they double as data keys for M4 schedules and M5
+ * line-of-sight, so moving them to JSON would split one identity across two files.
+ */
+export function roomAt(tileX: number, tileY: number, fallback: string): string {
   for (const room of ROOMS) {
     if (tileX >= room.x1 && tileX <= room.x2 && tileY >= room.y1 && tileY <= room.y2) {
       return room.name;
     }
   }
-  return 'Somewhere in the building';
+  return fallback;
 }
 
 /**

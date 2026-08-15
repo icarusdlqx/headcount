@@ -1,0 +1,10 @@
+{
+  "_comment": "Status-bar strings. The weekdays arrays must be at least BALANCE.week.daysPerWeek long; a dev-only assertion checks this at boot.",
+  "weekdays": ["MON", "TUE", "WED", "THU", "FRI"],
+  "weekdaysLong": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+  "meridiem": ["AM", "PM"],
+  "timeFormat": "{h}:{mm} {ap}",
+  "lunch": "LUNCH",
+  "hint": "Arrows / WASD to walk  ·  Shift to walk with purpose  ·  E to look",
+  "roomUnknown": "Somewhere in the building"
+}

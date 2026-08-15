@@ -1,0 +1,114 @@
+{
+  "_comment": "Every string at the day boundary. One file rather than three: a writer tuning the tone of this moment should not have to keep two files in sync. Predicate ids in remarks[].requires must exist in REMARK_PREDICATES in src/ui/daySummaryView.ts — a dev-only assertion checks this at boot.",
+
+  "window": {
+    "titleFormat": "{weekday} - Daily Activity Summary",
+    "heading": "{weekdayLong} — Week {week}",
+    "subheading": "9:00 AM – 5:00 PM   ·   Attendance: full",
+    "okLabel": "OK"
+  },
+
+  "rows": {
+    "timeOnPremises": "Time on premises",
+    "roomsEntered": "Rooms entered",
+    "distanceCovered": "Distance covered",
+    "longestStationary": "Longest period stationary",
+    "objectsExamined": "Objects examined",
+    "workCompleted": "Work completed",
+    "weekToDate": "Week to date"
+  },
+
+  "values": {
+    "hoursMinutes": "{hours} hr {minutes} min",
+    "minutes": "{minutes} min",
+    "seconds": "{seconds} sec",
+    "roomsEntered": "{visited} of {total}",
+    "distanceCovered": "{feet} ft (approx.)",
+    "objectsExamined": "{count}",
+    "workCompleted": "—",
+    "weekToDate": "{done} of {total} days"
+  },
+
+  "remarks": [
+    {
+      "id": "neverLeftFarm",
+      "requires": "neverLeftFarm",
+      "lines": [
+        "You did not leave the floor today. This has been noted, though not by anyone.",
+        "Eight hours, one room. Efficient, in a sense."
+      ]
+    },
+    {
+      "id": "longStationary",
+      "requires": "longStationary",
+      "lines": [
+        "One period of {stationary} without recorded movement. Equipment fault has been ruled out."
+      ]
+    },
+    {
+      "id": "lowDistance",
+      "requires": "lowDistance",
+      "lines": [
+        "Distance covered: {feet} feet. The mail cart covered more, and it is not paid."
+      ]
+    },
+    {
+      "id": "visitedEveryRoom",
+      "requires": "visitedEveryRoom",
+      "lines": [
+        "You entered every room in the building. There are {total}. One of them is the corridor."
+      ]
+    },
+    {
+      "id": "lastDayOfWeek",
+      "requires": "lastDayOfWeek",
+      "lines": [
+        "Friday. Your week is now historical data.",
+        "The week is complete. Complete and good are recorded in the same field."
+      ]
+    },
+    {
+      "id": "default",
+      "lines": [
+        "This summary is generated automatically. No one reads it.",
+        "Distance covered is recorded for insurance purposes and is not a performance metric.",
+        "Figures are provisional until reconciled. Reconciliation is not scheduled.",
+        "Your activity was within normal parameters. Normal parameters are not published.",
+        "A copy of this summary has been placed in a folder.",
+        "Thank you for your continued presence."
+      ]
+    }
+  ],
+
+  "weekend": [
+    "Saturday. You did four loads of laundry and thought about the fax machine twice.",
+    "You went to a hardware store for one item and left with that item.",
+    "Someone from work waved at you in a supermarket. Neither of you stopped.",
+    "Sunday. You bought a shirt in a colour you already own.",
+    "Two days. You spent one of them getting ready for the other.",
+    "The weekend passed without incident and without remark.",
+    "Sunday evening arrived at 4:00 PM, as it does."
+  ],
+
+  "morning": {
+    "first": ["9:00 AM. Monday. Your monitor faces the aisle."],
+    "monday": [
+      "Monday, 9:00 AM. The building smells like carpet again.",
+      "Monday, 9:00 AM. There is a new memo in your tray. It is the old memo."
+    ],
+    "midweek": [
+      "{weekdayLong}, 9:00 AM. Your monitor still faces the aisle.",
+      "{weekdayLong}, 9:00 AM. The fluorescent above your pod is now the subject of a ticket.",
+      "{weekdayLong}, 9:00 AM. Someone has moved the good chair. It is not your chair."
+    ]
+  },
+
+  "notices": {
+    "save.unavailable": "Corporate is not recording your progress. This browser declines to keep records.",
+    "save.quota": "Storage is full. Your day still happened. There is simply no record of it.",
+    "save.tooNew": "This record was written by a later version of the building. Nothing will be overwritten.",
+    "save.corrupt": "Your previous record was unreadable and has been set aside. Please begin again.",
+    "save.leftEarly": "You left before five. The day is being run again. It will go the same way.",
+    "save.scratch": "Pinned seed. This session is not being recorded."
+  }
+}

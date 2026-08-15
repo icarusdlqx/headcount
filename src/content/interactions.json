@@ -1,5 +1,6 @@
 {
   "_comment": "Flavour text for looking at things. Writers edit this file; no code changes required. Each key is a tile name from src/world/tiles.ts. Lines are picked with the seeded RNG so a given day reads the same twice.",
+  "_fallback": ["It is exactly what it looks like."],
   "DESK": [
     "A desk. Someone has labelled the stapler with their own name in marker.",
     "Under the blotter: a 1994 wall planner, unmarked.",
