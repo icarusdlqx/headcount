@@ -158,8 +158,8 @@ the break room only.
 | M2 | Day loop: clock, day advance, end-of-day summary, `localStorage` save/load | **Done** |
 | M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | **Done** |
 | M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | Next |
-| M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | |
-| M6 | Printer Jam, Dial-Up + IT favor sink | |
+| M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | **Done** |
+| M6 | Printer Jam, Dial-Up + IT favor sink | Next |
 | M7 | Friday review, weighted scoring, boss commentary, week progression | |
 | M8 | Faction rep, thermostat war, 4 more random events | |
 | M9 | Real pixel art, sound, Win95 UI skin, title screen, landing copy | |
@@ -375,10 +375,27 @@ it if you disagree.
     day — is exactly the right key when it fires. Without it, a player who knows
     the panel is executing nine fixed keypresses by day eight, which is data
     entry with a bar that fills.
-19. **The break room and bathroom have no stress-shedding drift yet.** A priced
-    hiding place IS the fluffing economy, and M5 is what makes hiding risky.
-    Shipping the reward before the risk would be shipping a dominant strategy on
-    purpose. Strain falls overnight and nowhere else at M3.
+19. ~~The break room and bathroom have no stress-shedding drift yet.~~
+    **Paid in M5.** Strain now falls during the day at three venues: the card
+    table, the cooler and the bathroom. The bathroom recovers fastest and cannot
+    be caught at all — nobody on the floor can see it — so it is priced in the
+    two currencies that are not risk: an eleven-minute round trip, and Boss
+    Approval bleeding the entire time you are gone.
+21. **The card table holds no pause reason.** The clock runs, the cast walks, and
+    the boss can arrive behind you. The fax is modal because it bills per action
+    and deliberation must be free; Solitaire bills in real seconds and the world
+    must keep watching. They are opposite minigames and must never share a
+    mechanism — any hold freezes the boss and deletes the threat.
+22. **Detection is a dwell counter, never a die roll.** A reporter must hold a
+    clear view for consecutive minutes. RNG picks only what Dale says. Every
+    catch therefore traces back to a decision the player could have unmade, which
+    is the difference between tense and unfair.
+23. **Screen exposure is gated on the observer's facing, hard.** A man with his
+    back to your monitor cannot read it. Without this the boss's twenty-minute
+    park beside your desk made exposure a step function, and the game became a
+    timetable to memorise rather than a risk to judge.
+24. **Silence is the common catch, speech is rare.** A boss who looks, says
+    nothing and keeps walking is the whole joke about this office.
 20. **Conditional summary remarks resolve in file order,** first match wins. A
     Friday where you never left the cubicle farm gets the "one room" line rather
     than the Friday line. Reorder the `remarks` array in `dayEnd.json` to change
