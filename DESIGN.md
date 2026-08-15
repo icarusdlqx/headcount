@@ -157,7 +157,7 @@ the break room only.
 | M1 | Skeleton: Vite + Phaser + TS boots; player moves on an office tilemap with collision; deployable | **Done** |
 | M2 | Day loop: clock, day advance, end-of-day summary, `localStorage` save/load | **Done** |
 | M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | **Done** |
-| M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | Next |
+| M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | **Done** |
 | M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | **Done** |
 | M6 | Printer Jam, Dial-Up + IT favor sink | Next |
 | M7 | Friday review, weighted scoring, boss commentary, week progression | |
