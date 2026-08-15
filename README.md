@@ -7,6 +7,9 @@ a Performance Review on Friday.
 Think Stardew Valley's daily loop meets Papers, Please's moral compromise,
 rendered entirely in beige.
 
+**Play it:** <https://headcount.ligand-ave.workers.dev> — published from `main`
+on every push.
+
 **Status:** M1 (skeleton) — the office exists and you can walk around it.
 See [DESIGN.md](DESIGN.md) for the full spec and the milestone roadmap.
 
