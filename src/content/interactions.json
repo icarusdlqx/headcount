@@ -1,0 +1,44 @@
+{
+  "_comment": "Flavour text for looking at things. Writers edit this file; no code changes required. Each key is a tile name from src/world/tiles.ts. Lines are picked with the seeded RNG so a given day reads the same twice.",
+  "DESK": [
+    "A desk. Someone has labelled the stapler with their own name in marker.",
+    "Under the blotter: a 1994 wall planner, unmarked.",
+    "The drawer sticks. Inside, forty-one pens. Two of them work."
+  ],
+  "CUBICLE": [
+    "Gray-blue fabric. If you press a pushpin in, it never comes out.",
+    "A partition. It stops sound the way a curtain stops weather.",
+    "Someone has stapled a cartoon here. It is about deadlines. It is not funny."
+  ],
+  "WALL": [
+    "A wall, painted the colour of an old paperback.",
+    "There is a scuff here at exactly shoulder height, repeated all down the hall."
+  ],
+  "PRINTER": [
+    "The laser printer. Amber light. It has been warming up since Tuesday.",
+    "PC LOAD LETTER, it says, to nobody, forever."
+  ],
+  "FAX": [
+    "The fax machine. Dial 9 first. Everyone knows this. Nobody was told.",
+    "A curled thermal page in the tray, faded to blank. It may have been important."
+  ],
+  "COOLER": [
+    "The water cooler. The social centre of the building and its listening post.",
+    "Glug. The bubble takes its time. So does everyone standing here."
+  ],
+  "RACK": [
+    "Servers. Warm, loud, and administered by a man who does not return pages.",
+    "A handwritten label: DO NOT UNPLUG (THIS MEANS YOU, ACCOUNTING)."
+  ],
+  "TABLE": [
+    "A conference table seating twelve, booked until March.",
+    "Ring stains in a perfect arc, one per attendee, one per meeting."
+  ],
+  "PLANT": [
+    "A ficus. Plastic, but dusted weekly by someone who knows that.",
+    "The leaves are shinier than anything else in the building."
+  ],
+  "DOORWAY": ["A doorway. The door itself was removed in an efficiency drive."],
+  "VINYL": ["Vinyl tile, waxed to a shine that makes the fluorescents worse."],
+  "CARPET": ["Industrial carpet. Speckled to hide coffee, and it does."]
+}
