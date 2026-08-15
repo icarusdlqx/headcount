@@ -99,8 +99,14 @@ Each is diegetic and short (20–60 seconds).
    mastery feels good.
 2. **Printer Jam** — open the right panels in order, remove paper without tearing
    it. Tearing makes the jam worse. Jam location is randomised per incident.
-3. **Dial-Up Internet** — timing minigame, fails randomly. After 3 fails you need
-   IT: a Favor Token, or a 45-in-game-minute wait while the ticket "escalates".
+3. ~~**Dial-Up Internet**~~ — **CUT in M6.** Every verb a modem offers is already
+   spoken for: sending is the fax, the delayed bill is the misdial reply, the
+   screen you should not be looking at is Solitaire, buying information is
+   Marjorie. And it is the one minigame for which both architectures are wrong —
+   non-modal bills 87 in-game minutes per real minute (a 30-second handshake
+   costs 44 in-game minutes), while modal makes it a cutscene that deletes its
+   own joke. "Fails randomly" also violates assumption 22. The IT ticket half of
+   its scope line survives, attached to the printer. See docs/M6-PLAN.md.
 4. **TPS Report** — transcribe fields from a memo into a form. Later versions add
    contradictory memos; obeying one angers a different manager.
 5. **The Meeting** — stay awake, nod when your name is said, do not nod during
@@ -159,7 +165,7 @@ the break room only.
 | M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | **Done** |
 | M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | **Done** |
 | M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | **Done** |
-| M6 | Printer Jam, Dial-Up + IT favor sink | Next |
+| M6 | Printer Jam + IT ticket (dial-up cut — see docs/M6-PLAN.md) | In progress |
 | M7 | Friday review, weighted scoring, boss commentary, week progression | |
 | M8 | Faction rep, thermostat war, 4 more random events | |
 | M9 | Real pixel art, sound, Win95 UI skin, title screen, landing copy | |
@@ -396,6 +402,14 @@ it if you disagree.
     timetable to memorise rather than a risk to judge.
 24. **Silence is the common catch, speech is rare.** A boss who looks, says
     nothing and keeps walking is the whole joke about this office.
+25. **Minutes are not the scarce resource.** A mastered day commits about 133 of
+    480 in-game minutes. The scarce resources are the fax tray (a hard cap on
+    Output), Rapport (no passive drift, two earn sources against five drains) and
+    desk-minutes (the only source of Standing). Price new work against those, not
+    against the clock — and measure before assuming the day is full, because a
+    wrong comment in fax.test.ts claiming a job cost 26 minutes rather than 14
+    propagated into planning and nearly cost the game a milestone's worth of
+    content it had room for.
 20. **Conditional summary remarks resolve in file order,** first match wins. A
     Friday where you never left the cubicle farm gets the "one room" line rather
     than the Friday line. Reorder the `remarks` array in `dayEnd.json` to change
