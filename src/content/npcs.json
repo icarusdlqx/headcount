@@ -1,6 +1,5 @@
 {
   "_comment": "The cast's every spoken word. Writers own this file; no code changes required to edit any of it. Ids match src/sim/npcRoster.ts. Chatter pools are drawn with the seeded RNG and never repeat within a day. {player} is never used — nobody here knows your name, which is the joke.",
-
   "names": {
     "steve": "Steve",
     "marjorie": "Marjorie",
@@ -8,7 +7,6 @@
     "pat": "Pat",
     "dale": "Dale"
   },
-
   "titles": {
     "steve": "Sales",
     "marjorie": "Mail & Records",
@@ -16,7 +14,6 @@
     "pat": "Accounting",
     "dale": "Regional Manager (Acting)"
   },
-
   "chatter": {
     "steve": [
       "You ever notice the vending machine gives you an extra one if you buy at 4:55? I don't make the rules.",
@@ -67,7 +64,6 @@
       "Big picture? Big picture, we're fine. Don't look at the small picture."
     ]
   },
-
   "stories": {
     "_comment": "The long one. Sitting through it costs real in-game minutes and earns a favor token. Each has a mid-point where the player could leave, which is the whole design: the favour is that you didn't.",
     "steve": {
@@ -95,7 +91,6 @@
       "leave": "That's alright. It's a lot. It's genuinely a lot."
     }
   },
-
   "greetings": {
     "_comment": "One line when a conversation opens, before options. Varies by how much favor the player holds with that person — the relationship is legible in how they greet you before any number is shown.",
     "cold": {
@@ -120,30 +115,25 @@
       "dale": "There he is. Whatever you're doing, keep doing it."
     }
   },
-
   "steveScenario": {
     "_comment": "THE scene. Steve leaves at 11:40 for a 'quick lunch' and returns at 2:15. Dale asks after him at a seeded point in between. This is the game's first real moral compromise and every branch must cost something.",
-
     "ask": {
       "open": "Listen. Listen. Are you doing anything for the next two hours?",
       "detail": "Because I'm not going to be doing anything for the next two hours. Officially I'm at the printer.",
       "stack": "There's a stack on my desk. It's four faxes. It's nothing. If Dale asks, I'm at the printer and the stack is handled."
     },
-
     "choices": {
       "cover": "\"You're at the printer. I'll do the stack.\"",
       "coverPartial": "\"You're at the printer. I'm not touching the stack.\"",
       "decline": "\"I'm not lying to Dale for you.\"",
       "needle": "\"How long is this lunch, Steve?\""
     },
-
     "replies": {
       "cover": "You're a good one. You're one of the good ones. I'll remember this.",
       "coverPartial": "That's fair. That's more than fair. The stack can rot, honestly.",
       "decline": "No — no, that's fine. That's completely fine. Forget I said anything.",
       "needle": "It's a lunch. It's a normal-length lunch. It's a lunch with a drive attached."
     },
-
     "daleAsks": {
       "open": "You seen Steve? I've been past his desk twice.",
       "choices": {
@@ -158,7 +148,6 @@
         "report": "Twenty to twelve. Well. Thank you for being straight with me. I'll remember that."
       }
     },
-
     "aftermath": {
       "steveGrateful": "Heard you held the line. Anything you need. Anything.",
       "steveBurned": "…Yeah. Hey.",
@@ -167,7 +156,6 @@
       "stackUnsent": "The stack's still on my desk. It's fine. I'm not — it's fine."
     }
   },
-
   "favors": {
     "_comment": "How a token is granted and spent. The grant line must land as a MOMENT, not as a number ticking up — a token with no memorable acquisition is bookkeeping.",
     "granted": {
@@ -195,7 +183,6 @@
       "pat": "\"Your balance is at the documented maximum.\""
     }
   },
-
   "sinks": {
     "_comment": "What a token BUYS at M4, using only what the game already contains: the fax machine, the clock, the boss and five meters. Everything here is real today — nothing is a promise against M5 or M6.",
     "marjorie": {
@@ -219,10 +206,16 @@
       "effect": "One fax counts as sent without walking there."
     }
   },
-
   "decay": {
     "_comment": "People forget. Narrated on the Friday BEFORE it happens rather than the Monday after, so it reads as a relationship cooling rather than the game taking something.",
     "warning": "You have not spoken to {name} all week. That is the sort of thing that gets noticed, quietly.",
     "lapsed": "{name} has stopped mentioning that thing you did. It has passed into the general past."
+  },
+  "ui": {
+    "_comment": "Footer lines for the conversation box. {min} is the story's time cost.",
+    "continue": "E — continue",
+    "offer": "E — stay and listen ({min} min)   ·   Esc — get back to it",
+    "close": "E — back to work",
+    "storyDone": "You've heard today's instalment."
   }
 }

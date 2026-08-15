@@ -20,7 +20,14 @@ interface HudContent {
   meridiem: string[];
   timeFormat: string;
   lunch: string;
-  hints: { base: string; atFax: string; faxDone: string; faxLate: string };
+  hints: {
+    base: string;
+    atFax: string;
+    faxDone: string;
+    faxLate: string;
+    objective: string;
+    objectiveDone: string;
+  };
   meters: Record<string, string>;
   roomUnknown: string;
 }

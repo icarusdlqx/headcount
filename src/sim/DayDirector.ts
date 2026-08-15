@@ -287,6 +287,23 @@ export class DayDirector {
     this.dayPlan = buildDayPlan(this.router, this.rng(`day:${this.run.dayIndex}:cast`));
   }
 
+  // --- favors --------------------------------------------------------------
+
+  /** Per-NPC tokens, straight out of the persisted flags record. */
+  favorWith(id: string): number {
+    return this.run.flags[`favor.${id}`] ?? 0;
+  }
+
+  /** True if the token was granted; false at the cap, so the caller can show
+   *  the capped line instead of a silent nothing. */
+  grantFavor(id: string): boolean {
+    const key = `favor.${id}`;
+    const held = this.run.flags[key] ?? 0;
+    if (held >= BALANCE.dialogue.favorCap) return false;
+    this.run.flags[key] = held + 1;
+    return true;
+  }
+
   /** A fresh independent stream. See deriveRng for why this is never cached. */
   rng(channel: string): Rng {
     return deriveRng(this.run.runSeed, channel);

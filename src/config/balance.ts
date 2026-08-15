@@ -246,8 +246,24 @@ export const BALANCE = {
      * quietly break.
      */
     maxTravelFractionOfGap: 0.8,
-    /** How close the player must stand to start a conversation, in tiles. */
-    talkRadius: 1.6,
+    /** How close the player must stand to start a conversation, in tiles.
+     *  Generous on purpose: E at someone doing nothing is the worse failure. */
+    talkRadius: 2.2,
+  },
+
+  /** Conversations and the favor ledger. */
+  dialogue: {
+    /** Sitting through somebody's story costs real in-game minutes. That charge
+     *  IS the favor: the thing you gave them was your afternoon. */
+    storyMinutes: 24,
+    /** Per-NPC token cap. Steve cannot owe you more than this. It's a lot for him. */
+    favorCap: 3,
+    /** Tokens owed before a greeting turns warm. The relationship is legible in
+     *  how people say hello, before any number is shown. */
+    warmAt: 2,
+    /** One story per person per day, or favor-farming becomes the optimal
+     *  morning and the office turns into a vending machine. */
+    storiesPerNpcPerDay: 1,
   },
 
   /** Persistence caps. Engineering invariants, not anti-cheat. */

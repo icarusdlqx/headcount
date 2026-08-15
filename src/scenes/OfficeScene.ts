@@ -22,6 +22,9 @@ import { Npc } from '../entities/Npc';
 import { Router } from '../sim/npcPath';
 import { ACTOR_IDS } from '../sim/npcRoster';
 import { createPose, poseAt, type NpcPose } from '../sim/npcSchedule';
+import { DialogueBox } from '../ui/DialogueBox';
+import { NPC_TEXT, chatterFor, greetingFor, nameFor, storyFor, titleFor } from '../ui/npcTalk';
+import { isFavorNpc } from '../sim/npcRoster';
 import { assertVisibilityCoverage, type PresenceSample } from '../sim/meters';
 import { misdialReplyDeltas } from '../sim/faxTray';
 import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
@@ -68,6 +71,15 @@ export class OfficeScene extends Phaser.Scene {
   private readonly cast: Npc[] = [];
   /** One reused pose object for the whole cast: five people, zero allocations. */
   private readonly poseScratch: NpcPose = createPose();
+
+  private dialogue!: DialogueBox;
+  /** The open conversation, if any. Stage drives what E does next. */
+  private talk: { id: string; stage: 'greeting' | 'chatter' | 'offer' | 'middle' | 'end' | 'granted' } | null = null;
+  /** One story per person per day; reset each morning. */
+  private storiesHeard = new Set<string>();
+  /** Distinct chatter within a day: nth chat with someone draws a fresh line. */
+  private chatCounts = new Map<string, number>();
+  private lastTrayCount = -1;
 
   /** Reused every minute so the meter step allocates nothing. Posture is derived
    *  fresh each time from the pause stack rather than latched by the fax scene:
@@ -123,8 +135,9 @@ export class OfficeScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.groundLayer);
 
     // Depth by row so people in front of you draw over you and people behind
-    // draw under. NPCs set theirs per frame from their tile Y.
-    this.player.setDepth(PLACES.playerCubicle.y);
+    // draw under. The player's updates per frame in update() — a fixed depth
+    // here drew NPCs over the player whenever the player stood lower on screen,
+    // which read exactly like walking through them.
     this.cameras.main.setBounds(0, 0, worldW, worldH);
     this.cameras.main.startFollow(this.player, true, BALANCE.view.cameraLerp, BALANCE.view.cameraLerp);
     this.cameras.main.setRoundPixels(true);
@@ -143,8 +156,12 @@ export class OfficeScene extends Phaser.Scene {
     this.overlay = createFluorescentOverlay(this);
     this.hud = new Hud(this);
 
+    this.dialogue = new DialogueBox(this);
+
     this.input.keyboard?.on('keydown-E', this.interact, this);
     this.input.keyboard?.on('keydown-SPACE', this.interact, this);
+    this.input.keyboard?.on('keydown-ENTER', this.interact, this);
+    this.input.keyboard?.on('keydown-ESC', this.leaveTalk, this);
 
     this.wireDirector();
     this.wireWindowFocus();
@@ -256,6 +273,8 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private endOfDay(info: DayEndInfo): void {
+    // Five o'clock does not care that you were mid-anecdote.
+    if (this.talk) this.closeTalk();
     // Otherwise a stale flavour line sits frozen under the modal, and its timer
     // hides the next morning's opener early.
     this.hud.clear();
@@ -296,6 +315,131 @@ export class OfficeScene extends Phaser.Scene {
     if (outcome.kind === 'abandoned' && outcome.jamLeftOpen) pool = FAX_TEXT.outcome['jamLeft'] ?? pool;
     if (pool.length === 0) return;
     this.hud.say(rng.pick(pool));
+  }
+
+  // --- conversations -------------------------------------------------------
+
+  /** The nearest visible cast member within arm's reach, or null. */
+  private nearestTalkableNpc(): Npc | null {
+    const radius = BALANCE.npc.talkRadius * BALANCE.view.tileSize;
+    const radiusSq = radius * radius;
+    const px = (this.player.body as Phaser.Physics.Arcade.Body).center.x;
+    const py = (this.player.body as Phaser.Physics.Arcade.Body).center.y;
+
+    let best: Npc | null = null;
+    let bestSq = radiusSq;
+    for (const npc of this.cast) {
+      if (!npc.visible) continue;
+      // Feet to feet, not feet to sprite-centre: the player's body center sits
+      // ~40px below their sprite's, and mixing the two frames made diagonal
+      // adjacency land just outside the radius — E at a person did nothing.
+      const nb = npc.body as Phaser.Physics.Arcade.Body;
+      const dx = nb.center.x - px;
+      const dy = nb.center.y - py;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < bestSq) {
+        best = npc;
+        bestSq = distSq;
+      }
+    }
+    return best;
+  }
+
+  private openTalk(id: string): void {
+    // Non-modal: the clock stops but the scene keeps running and keeps input —
+    // a conversation is a person in front of you, not a system dialog.
+    this.director.hold('dialogue');
+    this.hud.clear();
+    this.talk = { id, stage: 'greeting' };
+
+    const favor = this.director.favorWith(id);
+    const burned = (this.director.state.flags[`grudge.${id}`] ?? 0) > 0;
+    this.dialogue.show(
+      nameFor(id),
+      titleFor(id),
+      greetingFor(id, favor, burned),
+      NPC_TEXT.ui['continue'] ?? '',
+    );
+  }
+
+  private advanceTalk(): void {
+    if (!this.talk) return;
+    const { id, stage } = this.talk;
+    const day = this.director.state.dayIndex;
+
+    if (stage === 'greeting') {
+      const nth = this.chatCounts.get(id) ?? 0;
+      this.chatCounts.set(id, nth + 1);
+      const line = chatterFor(id, this.director.rng(`day:${day}:chat:${id}:${nth}`));
+
+      // Favor NPCs with an unheard story get the offer next; everyone else
+      // (and Dale, always) closes after their line.
+      const canStory = isFavorNpc(id) && !this.storiesHeard.has(id) && storyFor(id) !== null;
+      this.talk.stage = canStory ? 'chatter' : 'end';
+      this.dialogue.say(line, canStory ? (NPC_TEXT.ui['continue'] ?? '') : (NPC_TEXT.ui['close'] ?? ''));
+      return;
+    }
+
+    if (stage === 'chatter') {
+      const story = storyFor(id);
+      if (!story) {
+        this.closeTalk();
+        return;
+      }
+      this.talk.stage = 'offer';
+      this.dialogue.say(story.open, fill(NPC_TEXT.ui['offer'] ?? '', { min: BALANCE.dialogue.storyMinutes }));
+      return;
+    }
+
+    if (stage === 'offer') {
+      // Staying IS the favour: the thing you gave them was your afternoon.
+      const story = storyFor(id);
+      if (!story) {
+        this.closeTalk();
+        return;
+      }
+      this.director.spendMinutes(BALANCE.dialogue.storyMinutes);
+      this.storiesHeard.add(id);
+      this.talk.stage = 'middle';
+      this.dialogue.say(story.middle, NPC_TEXT.ui['continue'] ?? '');
+      return;
+    }
+
+    if (stage === 'middle') {
+      const story = storyFor(id);
+      this.talk.stage = 'granted';
+      this.dialogue.say(story?.end ?? '', NPC_TEXT.ui['continue'] ?? '');
+      return;
+    }
+
+    if (stage === 'granted') {
+      // The token lands as a MOMENT, in their words, not as a number ticking up.
+      const granted = this.director.grantFavor(id);
+      const line = granted ? (NPC_TEXT.favors.granted[id] ?? '') : (NPC_TEXT.favors.capped[id] ?? '');
+      this.talk.stage = 'end';
+      this.dialogue.say(line, NPC_TEXT.ui['close'] ?? '');
+      return;
+    }
+
+    this.closeTalk();
+  }
+
+  /** Esc: walk away. Mid-offer it gets their "you're leaving" line as a parting
+   *  message, which is the design — the option to leave is what makes staying
+   *  a favour. */
+  private leaveTalk(): void {
+    if (!this.talk) return;
+    const story = storyFor(this.talk.id);
+    if (this.talk.stage === 'offer' && story) {
+      this.hud.say(story.leave);
+    }
+    this.closeTalk();
+  }
+
+  private closeTalk(): void {
+    this.talk = null;
+    this.dialogue.hide();
+    this.director.release('dialogue');
   }
 
   /** Rebuilt in place each minute. Posture is derived, never latched. */
@@ -344,6 +488,9 @@ export class OfficeScene extends Phaser.Scene {
     this.cameras.main.centerOn(this.player.x, this.player.y);
 
     this.lastRoom = '';
+    this.storiesHeard.clear();
+    this.chatCounts.clear();
+    this.lastTrayCount = -1;
     this.hud.clear();
   }
 
@@ -367,7 +514,21 @@ export class OfficeScene extends Phaser.Scene {
    * it, otherwise look at whatever you are facing.
    */
   private interact(): void {
+    // An open conversation captures E before anything else — the 'dialogue'
+    // pause reason holds the clock, so the pause.running check below would
+    // otherwise eat the keypress that is supposed to advance the chat.
+    if (this.talk) {
+      this.advanceTalk();
+      return;
+    }
+
     if (!this.director.pause.running) return;
+
+    const npc = this.nearestTalkableNpc();
+    if (npc) {
+      this.openTalk(npc.actorId);
+      return;
+    }
 
     if (this.facingTileIs(TILE.FAX)) {
       if (this.director.faxAvailable) {
@@ -422,6 +583,8 @@ export class OfficeScene extends Phaser.Scene {
     }
 
     const here = this.player.tileCoords(this.tileScratch);
+    // Y-sorted rendering: the row you stand on is your draw order.
+    if (this.player.depth !== here.y) this.player.setDepth(here.y);
     const room = roomAt(here.x, here.y, HUD_TEXT.roomUnknown);
     if (room !== this.lastRoom) {
       this.lastRoom = room;
@@ -430,7 +593,21 @@ export class OfficeScene extends Phaser.Scene {
     }
 
     this.syncCast();
+    this.updateObjective();
     this.updateDebug(delta);
+  }
+
+  /** The hint pane carries the objective all day. Rebuilt only when the tray
+   *  count changes, so the fill() allocation happens a handful of times a day. */
+  private updateObjective(): void {
+    const count = this.director.tray.length;
+    if (count === this.lastTrayCount) return;
+    this.lastTrayCount = count;
+    this.hud.setHint(
+      count === 0
+        ? (HUD_TEXT.hints.objectiveDone ?? '')
+        : fill(HUD_TEXT.hints.objective ?? '', { count }),
+    );
   }
 
   /**

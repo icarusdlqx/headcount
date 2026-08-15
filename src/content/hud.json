@@ -1,12 +1,26 @@
 {
   "_comment": "Status-bar and meter-tray strings. The weekdays arrays must be at least BALANCE.week.daysPerWeek long. The meters map is keyed by the METER ids in src/sim/meters.ts.",
-  "weekdays": ["MON", "TUE", "WED", "THU", "FRI"],
-  "weekdaysLong": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-  "meridiem": ["AM", "PM"],
+  "weekdays": [
+    "MON",
+    "TUE",
+    "WED",
+    "THU",
+    "FRI"
+  ],
+  "weekdaysLong": [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday"
+  ],
+  "meridiem": [
+    "AM",
+    "PM"
+  ],
   "timeFormat": "{h}:{mm} {ap}",
   "lunch": "LUNCH",
   "roomUnknown": "Somewhere in the building",
-
   "meters": {
     "productivity": "Output",
     "bossApproval": "Standing",
@@ -14,11 +28,12 @@
     "stress": "Strain",
     "visibility": "Exposure"
   },
-
   "hints": {
     "base": "Arrows / WASD  ·  Shift to walk with purpose  ·  E to look",
     "atFax": "E — use the fax machine  ·  {count} in the tray",
     "faxDone": "The tray is empty. There is nothing further to send.",
-    "faxLate": "Too late to start another. The machine warms up for six minutes."
+    "faxLate": "Too late to start another. The machine warms up for six minutes.",
+    "objective": "Tray: {count} to fax (east)  ·  E — talk / use  ·  Review is Friday",
+    "objectiveDone": "Tray empty. Look busy until five.  ·  Review is Friday"
   }
 }

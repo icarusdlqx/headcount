@@ -39,9 +39,12 @@ export class Npc extends Phaser.Physics.Arcade.Sprite {
     this.setVisible(false);
 
     const body = this.body as Phaser.Physics.Arcade.Body;
-    const { bodyWidth, bodyHeight } = BALANCE.player;
-    body.setSize(bodyWidth, bodyHeight);
-    body.setOffset((CHAR_FRAME_W - bodyWidth) / 2, CHAR_FRAME_H - bodyHeight - 1);
+    // Torso-and-legs, not just feet. With a feet-only box the player sinks
+    // waist-deep into the sprite before separation fires, which reads as
+    // walking through a person. 22px wide still leaves two thirds of every
+    // two-tile corridor clear.
+    body.setSize(22, 22);
+    body.setOffset((CHAR_FRAME_W - 22) / 2, CHAR_FRAME_H - 22 - 1);
     // The whole safety argument: the player gets displaced, never the NPC.
     body.setImmovable(true);
     body.pushable = false;
