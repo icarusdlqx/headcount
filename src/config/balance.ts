@@ -225,6 +225,21 @@ export const BALANCE = {
     animMs: { feed: 450, tray: 200, copy: 900, crumple: 700, transmit: 2600, ok: 900, eject: 500 },
   },
 
+  /** The cast. Schedules themselves live in src/sim/npcSchedule.ts — those are
+   *  staging, not tuning, and a designer retuning numbers should not restage the
+   *  office by accident. */
+  npc: {
+    /**
+     * In-game minutes to cross one tile. At 2, a walk from the mail desk to the
+     * player's cubicle is about 40 minutes — slow enough that a schedule is a
+     * real constraint on where someone can be, and fast enough that Marjorie
+     * completes her circuit twice a day.
+     */
+    minutesPerTile: 2,
+    /** How close the player must stand to start a conversation, in tiles. */
+    talkRadius: 1.6,
+  },
+
   /** Persistence caps. Engineering invariants, not anti-cheat. */
   save: {
     /** Length gate applied BEFORE JSON.parse. A ten-year save is a few KB. */

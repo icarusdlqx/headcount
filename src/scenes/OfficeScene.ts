@@ -18,6 +18,10 @@ import {
 } from '../world/officeMap';
 import { SOLID_TILES, TILE } from '../world/tiles';
 import { getDirector, type DayDirector } from '../sim/DayDirector';
+import { Npc } from '../entities/Npc';
+import { Router } from '../sim/npcPath';
+import { ACTOR_IDS } from '../sim/npcRoster';
+import { createPose, poseAt, type NpcPose } from '../sim/npcSchedule';
 import { assertVisibilityCoverage, type PresenceSample } from '../sim/meters';
 import { misdialReplyDeltas } from '../sim/faxTray';
 import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
@@ -61,6 +65,9 @@ export class OfficeScene extends Phaser.Scene {
   /** Scratch vector — reused so update() allocates nothing. */
   private readonly tileScratch = new Phaser.Math.Vector2();
   private lastRoom = '';
+  private readonly cast: Npc[] = [];
+  /** One reused pose object for the whole cast: five people, zero allocations. */
+  private readonly poseScratch: NpcPose = createPose();
 
   /** Reused every minute so the meter step allocates nothing. Posture is derived
    *  fresh each time from the pause stack rather than latched by the fax scene:
@@ -118,6 +125,11 @@ export class OfficeScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, worldW, worldH);
     this.cameras.main.startFollow(this.player, true, BALANCE.view.cameraLerp, BALANCE.view.cameraLerp);
     this.cameras.main.setRoundPixels(true);
+
+    // Routes are derived from the real grid at boot and memoised per goal, so a
+    // map edit re-routes the whole cast instead of walking them through a wall.
+    this.director.installRouter(new Router(grid));
+    for (const id of ACTOR_IDS) this.cast.push(new Npc(this, id, `npc-${id}`));
 
     this.overlay = createFluorescentOverlay(this);
     this.hud = new Hud(this);
@@ -408,7 +420,25 @@ export class OfficeScene extends Phaser.Scene {
       this.director.noteRoom(room);
     }
 
+    this.syncCast();
     this.updateDebug(delta);
+  }
+
+  /**
+   * Everyone's position is recomputed from the clock each frame rather than
+   * simulated, so the floor freezes correctly under a modal fax, resumes exactly
+   * where the new minute says after one charges 100 minutes, and needs nothing
+   * at the day boundary beyond the clock going back to zero.
+   *
+   * minutesFloat, not minute: the fraction is sub-tile interpolation, which is
+   * presentation. Anything that makes a DECISION reads the discrete minute.
+   */
+  private syncCast(): void {
+    const plan = this.director.plan;
+    const minutes = this.director.minutesFloat;
+    for (const npc of this.cast) {
+      npc.syncTo(poseAt(plan, npc.actorId, minutes, this.poseScratch));
+    }
   }
 
   /** Throttled: setText re-rasterises a canvas, so a per-frame readout is worse

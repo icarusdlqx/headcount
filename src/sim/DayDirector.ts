@@ -17,6 +17,8 @@ import {
   type PresenceSample,
 } from './meters';
 import { generatePanel, type FaxOutcome, type FaxPanel } from './faxMachine';
+import { Router } from './npcPath';
+import { buildDayPlan, type DayPlan } from './npcSchedule';
 import { buildTray, faxOutcomeDeltas, foreignJamChance, type FaxJob, type MeterDelta } from './faxTray';
 import {
   beginDay as beginDayState,
@@ -54,6 +56,8 @@ export class DayDirector {
   private speakerCharged = false;
   private pendingReplyMinute: number | null = null;
   private lastFaxOutcome: FaxOutcome | null = null;
+  private router: Router | null = null;
+  private dayPlan: DayPlan = {};
 
   constructor(state: RunState, save: SaveService) {
     this.run = state;
@@ -266,6 +270,23 @@ export class DayDirector {
     if (this.pause.release(reason)) this.events.emit(DAY_EVENTS.CLOCK_RELEASED, reason);
   }
 
+  /** Built once at boot from the real tile grid, then memoised per goal. */
+  installRouter(router: Router): void {
+    this.router = router;
+    // beginDay may already have run (cold boot orders OfficeScene after Boot),
+    // so build the plan now rather than waiting for tomorrow morning.
+    this.rebuildDayPlan();
+  }
+
+  get plan(): DayPlan {
+    return this.dayPlan;
+  }
+
+  private rebuildDayPlan(): void {
+    if (!this.router) return;
+    this.dayPlan = buildDayPlan(this.router, this.rng(`day:${this.run.dayIndex}:cast`));
+  }
+
   /** A fresh independent stream. See deriveRng for why this is never cached. */
   rng(channel: string): Rng {
     return deriveRng(this.run.runSeed, channel);
@@ -297,6 +318,8 @@ export class DayDirector {
     // Rebuilt from the seed every morning and never persisted, so an abandoned
     // day regenerates an identical tray and there is nothing to migrate.
     this.jobs = buildTray(this.rng(`day:${this.run.dayIndex}:fax`), this.run.dayIndex);
+    // Today's staging. Rebuilt from the seed every morning and never persisted.
+    this.rebuildDayPlan();
 
     // Someone left the machine jammed. Either you did, last night, or your
     // colleagues have stopped clearing it for you.

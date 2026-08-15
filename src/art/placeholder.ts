@@ -3,6 +3,7 @@ import { PALETTE, css } from './palette';
 import { TILE, TILE_COUNT } from '../world/tiles';
 import { makeRng } from '../util/rng';
 import { CHAR_DIRECTIONS, CHAR_FRAME_H, CHAR_FRAME_W, type CharDirection } from './charFrames';
+import type { CharacterLook } from '../sim/npcRoster';
 
 /**
  * Procedural placeholder art.
@@ -177,53 +178,111 @@ export function createCharacter(scene: Phaser.Scene): void {
   }
 }
 
+/**
+ * Builds one sheet per NPC from their CharacterLook.
+ *
+ * The silhouette has to read at 24x32 from across a thirty-tile camera, so each
+ * character gets exactly one strong shape tell (build, hair height) and one
+ * strong colour tell. More than that and everyone turns to mush at this size.
+ */
+export function createNpcSheet(scene: Phaser.Scene, key: string, look: CharacterLook): void {
+  if (scene.textures.exists(key)) return;
+
+  const cols = 3;
+  const rows = CHAR_DIRECTIONS.length;
+  const texture = scene.textures.createCanvas(key, CHAR_FRAME_W * cols, CHAR_FRAME_H * rows);
+  if (!texture) throw new Error(`createNpcSheet: could not create canvas texture for ${key}`);
+  const ctx = texture.getContext();
+  ctx.imageSmoothingEnabled = false;
+
+  CHAR_DIRECTIONS.forEach((dir, row) => {
+    for (let col = 0; col < cols; col++) {
+      drawCharacterFrame(ctx, col * CHAR_FRAME_W, row * CHAR_FRAME_H, dir, col, look);
+    }
+  });
+
+  texture.refresh();
+
+  let index = 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      texture.add(index++, 0, col * CHAR_FRAME_W, row * CHAR_FRAME_H, CHAR_FRAME_W, CHAR_FRAME_H);
+    }
+  }
+}
+
+/** The player's own colours, expressed as a look so one routine draws everyone. */
+const PLAYER_LOOK: CharacterLook = {
+  shirt: PALETTE.shirt,
+  shirtShade: PALETTE.shirtShade,
+  trousers: PALETTE.trousers,
+  hair: PALETTE.hair,
+  skin: PALETTE.skin,
+  tie: PALETTE.tie,
+  build: 0,
+  hairHeight: 4,
+  pattern: 0,
+};
+
 /** step: 0 = idle, 1 = left foot, 2 = right foot. */
-function drawCharacterFrame(ctx: Ctx, ox: number, oy: number, dir: CharDirection, step: number): void {
+function drawCharacterFrame(
+  ctx: Ctx,
+  ox: number,
+  oy: number,
+  dir: CharDirection,
+  step: number,
+  look: CharacterLook = PLAYER_LOOK,
+): void {
   const facingSide = dir === 'left' || dir === 'right';
   const bob = step === 0 ? 0 : 1;
 
   // Legs — alternate which one leads so the walk reads at 7fps.
   const legY = oy + 24;
   const lead = step === 1 ? -1 : step === 2 ? 1 : 0;
-  fill(ctx, PALETTE.trousers, ox + 8 + (facingSide ? lead : -lead), legY, 3, 6);
-  fill(ctx, PALETTE.trousersShade, ox + 13 - (facingSide ? lead : -lead), legY, 3, 6);
+  fill(ctx, look.trousers, ox + 8 + (facingSide ? lead : -lead), legY, 3, 6);
+  fill(ctx, look.trousers, ox + 13 - (facingSide ? lead : -lead), legY, 3, 6);
   fill(ctx, PALETTE.shoe, ox + 8 + (facingSide ? lead : -lead), legY + 6, 3, 2);
   fill(ctx, PALETTE.shoe, ox + 13 - (facingSide ? lead : -lead), legY + 6, 3, 2);
 
   // Torso — a short-sleeved dress shirt, tucked, always.
   const torsoY = oy + 14 + bob;
-  fill(ctx, PALETTE.shirt, ox + 6, torsoY, 12, 11);
-  fill(ctx, PALETTE.shirtShade, ox + 6, torsoY, 12, 2);
+  const b = look.build;
+  fill(ctx, look.shirt, ox + 6 - b, torsoY, 12 + b * 2, 11);
+  fill(ctx, look.shirtShade, ox + 6 - b, torsoY, 12 + b * 2, 2);
   if (facingSide) {
-    fill(ctx, PALETTE.shirtShade, ox + (dir === 'left' ? 6 : 15), torsoY, 3, 11);
+    fill(ctx, look.shirtShade, ox + (dir === 'left' ? 6 - b : 15 + b), torsoY, 3, 11);
   }
+  // The Hawaiian band. Steve, on Fridays, and nobody else ever.
+  if (look.pattern !== 0) fill(ctx, look.pattern, ox + 6 - b, torsoY + 5, 12 + b * 2, 3);
 
   // Arms.
-  fill(ctx, PALETTE.shirt, ox + 4, torsoY + 1, 2, 8);
-  fill(ctx, PALETTE.shirt, ox + 18, torsoY + 1, 2, 8);
-  fill(ctx, PALETTE.skin, ox + 4, torsoY + 9, 2, 2);
-  fill(ctx, PALETTE.skin, ox + 18, torsoY + 9, 2, 2);
+  fill(ctx, look.shirt, ox + 4 - b, torsoY + 1, 2, 8);
+  fill(ctx, look.shirt, ox + 18 + b, torsoY + 1, 2, 8);
+  fill(ctx, look.skin, ox + 4 - b, torsoY + 9, 2, 2);
+  fill(ctx, look.skin, ox + 18 + b, torsoY + 9, 2, 2);
 
   // Tie — only visible from the front. From behind it is a rumour.
-  if (dir === 'down') {
-    fill(ctx, PALETTE.tie, ox + 11, torsoY + 1, 2, 8);
-    fill(ctx, PALETTE.tie, ox + 10, torsoY + 7, 4, 3);
+  if (dir === 'down' && look.tie !== 0) {
+    fill(ctx, look.tie, ox + 11, torsoY + 1, 2, 8);
+    fill(ctx, look.tie, ox + 10, torsoY + 7, 4, 3);
   }
 
   // Head.
   const headY = oy + 5 + bob;
-  fill(ctx, PALETTE.skin, ox + 7, headY, 10, 10);
-  fill(ctx, PALETTE.skinShade, ox + 7, headY + 8, 10, 2);
-  fill(ctx, PALETTE.hair, ox + 6, headY - 2, 12, 4);
+  fill(ctx, look.skin, ox + 7, headY, 10, 10);
+  fill(ctx, look.skin, ox + 7, headY + 8, 10, 2);
+  // Hair height is a silhouette tell: Marjorie's grey stack reads from range,
+  // and Dale's 2px reads as thinning, which is the point of Dale.
+  if (look.hairHeight > 0) fill(ctx, look.hair, ox + 6, headY - look.hairHeight + 2, 12, look.hairHeight);
 
   if (dir === 'down') {
-    fill(ctx, PALETTE.hair, ox + 9, headY + 4, 2, 2);
-    fill(ctx, PALETTE.hair, ox + 14, headY + 4, 2, 2);
+    fill(ctx, look.hair, ox + 9, headY + 4, 2, 2);
+    fill(ctx, look.hair, ox + 14, headY + 4, 2, 2);
   } else if (dir === 'up') {
-    fill(ctx, PALETTE.hair, ox + 6, headY, 12, 7);
+    fill(ctx, look.hair, ox + 6, headY, 12, 7);
   } else {
     const eyeX = dir === 'left' ? ox + 8 : ox + 14;
-    fill(ctx, PALETTE.hair, eyeX, headY + 4, 2, 2);
-    fill(ctx, PALETTE.hair, ox + (dir === 'left' ? 6 : 12), headY - 1, 6, 4);
+    fill(ctx, look.hair, eyeX, headY + 4, 2, 2);
+    fill(ctx, look.hair, ox + (dir === 'left' ? 6 : 12), headY - 1, 6, 4);
   }
 }

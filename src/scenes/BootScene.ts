@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { createCharacter, createTileset } from '../art/placeholder';
+import { createCharacter, createNpcSheet, createTileset } from '../art/placeholder';
+import { ACTOR_IDS, ROSTER } from '../sim/npcRoster';
 import { assertClockBalance } from '../sim/DayClock';
 import { DayDirector, installDirector } from '../sim/DayDirector';
 import { SaveService } from '../save/SaveService';
@@ -23,6 +24,7 @@ export class BootScene extends Phaser.Scene {
 
     createTileset(this);
     createCharacter(this);
+    for (const id of ACTOR_IDS) createNpcSheet(this, `npc-${id}`, ROSTER[id].look);
 
     if (import.meta.env.DEV) {
       const problems = assertContentIntegrity();

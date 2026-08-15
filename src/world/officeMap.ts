@@ -75,6 +75,15 @@ export const PLACES = {
   breakRoom: { x: 34, y: 5, label: 'Break room' },
   printerRoom: { x: 34, y: 13, label: 'Printer / fax room' },
   supplyRoom: { x: 34, y: 24, label: 'Supply & mail' },
+
+  // The cast's stations. In PLACES rather than the roster so that
+  // findUnreachablePlaces() guards every one of them against a map edit for free.
+  steveCubicle: { x: 22, y: 4, label: "Steve's cubicle" },
+  patCubicle: { x: 16, y: 9, label: "Pat's cubicle" },
+  mailDesk: { x: 35, y: 26, label: 'The mail desk' },
+  bossDesk: { x: 5, y: 4, label: "Dale's desk" },
+  /** The middle of the cubicle farm, where Dale's walkthrough passes. */
+  farmAisle: { x: 19, y: 5, label: 'The aisle' },
 } as const;
 
 export type PlaceKey = keyof typeof PLACES;
