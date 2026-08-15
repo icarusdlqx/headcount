@@ -55,24 +55,24 @@ In dev builds the running game is exposed as `window.game` for console poking.
 
 ---
 
-## Deploying to Cloudflare Pages
+## Deploying
 
-Pages builds this repo directly; there is no backend and no environment config.
+Cloudflare builds straight from the repository, so **a push to `main` is a
+deploy**. Set up once:
 
-1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
-   **Connect to Git**.
-2. Pick the `headcount` repo and authorise access.
-3. Build settings:
-   - **Framework preset:** None
-   - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-   - **Root directory:** `/`
-   - **Node version:** set `NODE_VERSION` to `20` (or newer) under
-     Settings → Environment variables, if the default image is older.
-4. Save and deploy. Every push to `main` redeploys; pull requests get preview
-   URLs automatically.
+1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Import a
+   repository**. Pick `icarusdlqx/headcount`.
+2. Build command `npm run build`, output directory `dist`, production branch
+   `main`. Node version comes from `.node-version`, so leave it alone.
+3. **Turn the URL on.** Project → **Domains** → enable the `*.workers.dev`
+   address. It is off by default, and until it is on the Overview tab says
+   "No URLs enabled" and nothing is reachable however well the build went.
 
-No GitHub Actions workflow is needed — Pages handles CI.
+After that, every push to `main` redeploys automatically. Pushes to any other
+branch get their own preview URL and leave production alone.
+
+Full details, including caching and deploying without pushing, are in
+[docs/HOSTING.md](docs/HOSTING.md). No GitHub Actions workflow is needed.
 
 ---
 
