@@ -51,6 +51,14 @@ export interface PresenceSample {
   speakerToday: boolean;
   tileX: number;
   tileY: number;
+  /**
+   * 0..1 — how much of you the best-placed observer can actually SEE, from
+   * src/sim/sight.ts. Computed in OfficeScene, where poses live, and passed in
+   * so this module stays pure and node-testable.
+   */
+  eyes: number;
+  /** 0..1 — how readable your monitor is to somebody who files reports. */
+  screenSeen: number;
 }
 
 export type Posture = 'desk' | 'busy' | 'elsewhere';
@@ -75,6 +83,8 @@ export const DESK_AT_REST: Readonly<PresenceSample> = Object.freeze({
   speakerToday: false,
   tileX: PLACES.playerCubicle.x,
   tileY: PLACES.playerCubicle.y,
+  eyes: 0,
+  screenSeen: 0,
 });
 
 export function clampMeter(value: number): number {
@@ -111,16 +121,31 @@ export function sanitiseMeters(meters: Record<string, number>): void {
 }
 
 /**
- * THE M5 SEAM. M5 replaces this body with a line-of-sight raycast against the
- * boss and the snitch NPCs, using the tile coordinates already on the sample.
- * Nothing else in this file moves, and the sentence that describes the meter does
- * not change: "how much of the floor can see you right now".
+ * How exposed you are right now.
+ *
+ * M5 filled the seam this function was left as. It is now two things added
+ * together:
+ *
+ *   AMBIENT — how public the room is, whether or not anybody is in it. Scaled
+ *   down rather than removed, because a meter that reads zero every morning
+ *   before the floor fills up looks broken and teaches nothing.
+ *
+ *   EYES — how much of you the best-placed person can actually see, raycast
+ *   against the real partitions in sight.ts. This is the half that makes ducking
+ *   behind your own cubicle wall mean something.
+ *
+ * The ownDesk delta is gone: the partitions now do that work for real, and
+ * keeping a flat bonus on top would pay you twice for the same wall.
  */
 export function visibilityTarget(sample: Readonly<PresenceSample>): number {
-  let v = EXPOSURE[sample.room] ?? BALANCE.visibility.fallbackExposure;
-  // Your body is behind a partition. Deliberately not modelling the monitor
-  // facing the aisle — that is SCREEN exposure, a separate M5 concern.
-  if (sample.atOwnDesk) v += BALANCE.visibility.ownDeskDelta;
+  const room = EXPOSURE[sample.room] ?? BALANCE.visibility.fallbackExposure;
+  const ambient = room * BALANCE.sight.ambientWeight;
+
+  // Eyes close the remaining distance to fully exposed, so being watched in a
+  // quiet room and being watched in the corridor both end up near the top.
+  let v = ambient + (BALANCE.meters.max - ambient) * Math.min(1, Math.max(0, sample.eyes));
+
+  // Movement draws the eye whether or not anyone is currently looking at you.
   if (sample.posture === 'busy') v += BALANCE.visibility.busyDelta;
   if (sample.moving) v += BALANCE.visibility.movingDelta;
   if (sample.moving && sample.purposeful) v += BALANCE.visibility.purposefulDelta;

@@ -64,6 +64,7 @@ export class DayDirector {
   /** Today's Steve situation. Rebuilt each morning; only the grudge persists. */
   private steveStage: SteveStage = 'none';
   private steveJobId: string | null = null;
+  private chargingMinutes = false;
 
   constructor(state: RunState, save: SaveService) {
     this.run = state;
@@ -117,9 +118,19 @@ export class DayDirector {
    */
   spendMinutes(count: number): void {
     if (this.run.phase !== 'working') return;
+    // Re-entrancy guard. advanceMinutes fires MINUTE events SYNCHRONOUSLY, and
+    // anything driven off that hook (M5's fluff machine) would otherwise run
+    // inside its own charge — pressing the panic key at dwell 4 would land you
+    // at dwell 6 and the panic key would catch you.
+    if (this.chargingMinutes) return;
+    this.chargingMinutes = true;
     const cap = this.pause.modal ? MINUTES_PER_DAY - 1 : MINUTES_PER_DAY;
     const room = Math.max(0, cap - this.clock.minute);
-    this.clock.advanceMinutes(Math.min(Math.max(0, Math.trunc(count)), room));
+    try {
+      this.clock.advanceMinutes(Math.min(Math.max(0, Math.trunc(count)), room));
+    } finally {
+      this.chargingMinutes = false;
+    }
   }
 
   // --- meters ------------------------------------------------------------

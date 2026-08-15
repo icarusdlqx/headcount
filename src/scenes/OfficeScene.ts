@@ -29,6 +29,7 @@ import { METER } from '../sim/meters';
 import type { PlanLeg } from '../sim/npcSchedule';
 import { isFavorNpc } from '../sim/npcRoster';
 import { assertVisibilityCoverage, type PresenceSample } from '../sim/meters';
+import { buildOpacityGrid, watchedBy, type Observer, type Watched } from '../sim/sight';
 
 import { misdialReplyDeltas } from '../sim/faxTray';
 import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
@@ -113,7 +114,15 @@ export class OfficeScene extends Phaser.Scene {
     speakerToday: false,
     tileX: 0,
     tileY: 0,
+    eyes: 0,
+    screenSeen: 0,
   };
+
+  /** Sight opacity, built once from the same grid the tilemap uses. */
+  private opacity!: Uint8Array;
+  /** One reused observer slot per actor: five people, zero allocations a minute. */
+  private readonly observerPool: Observer[] = [];
+  private watched: Watched = { eyes: 0, screen: 0, watcherId: null };
 
   constructor() {
     super('Office');
@@ -151,6 +160,10 @@ export class OfficeScene extends Phaser.Scene {
 
     const spawn = PLACES.playerCubicle;
     this.player = new Player(this, spawn.x * size + size / 2, spawn.y * size + size / 2);
+    // Face the desk, exactly as every morning after this one does. The
+    // constructor's default is 'down', which on day one of a session left the
+    // player staring into the aisle and made the desk uninteractable.
+    this.player.placeAt(spawn.x, spawn.y, 'up');
     this.physics.add.collider(this.player, this.groundLayer);
 
     // Depth by row so people in front of you draw over you and people behind
@@ -164,6 +177,7 @@ export class OfficeScene extends Phaser.Scene {
     // Routes are derived from the real grid at boot and memoised per goal, so a
     // map edit re-routes the whole cast instead of walking them through a wall.
     this.director.installRouter(new Router(grid));
+    this.opacity = buildOpacityGrid(grid);
     for (const id of ACTOR_IDS) {
       const npc = new Npc(this, id, `npc-${id}`);
       // Solid. Immovable, so a colleague crossing your path stops you rather
@@ -266,7 +280,11 @@ export class OfficeScene extends Phaser.Scene {
 
     // Passive drift hangs off the discrete minute, never off update(): a
     // per-frame drift makes 144Hz and 60Hz machines play different days.
-    this.director.stepMeters(this.samplePresence());
+    const sample = this.samplePresence();
+    this.updateWatched();
+    sample.eyes = this.watched.eyes;
+    sample.screenSeen = this.watched.screen;
+    this.director.stepMeters(sample);
     this.hud.setMeters(this.director.meters);
 
     // The bill for a misdial, arriving back at your desk long after you felt
@@ -669,6 +687,41 @@ export class OfficeScene extends Phaser.Scene {
     this.director.release('dialogue');
   }
 
+  /**
+   * Who can see you this minute.
+   *
+   * Called from the MINUTE hook, never per frame: five raycasts over a 40x30
+   * grid is cheap, but it is not free, and the project rule is that state hangs
+   * off the discrete minute so two frame rates play the same day.
+   */
+  private updateWatched(): void {
+    this.observerPool.length = 0;
+    const plan = this.director.plan;
+    const minute = this.director.minute;
+
+    for (const npc of this.cast) {
+      const pose = poseAt(plan, npc.actorId, minute, this.poseScratch);
+      if (!pose.visible) continue;
+      const watch = BALANCE.sight.observers[npc.actorId];
+      if (!watch) continue;
+      this.observerPool.push({
+        id: npc.actorId,
+        x: Math.round(pose.x),
+        y: Math.round(pose.y),
+        facing: pose.facing,
+        attention: watch.attention,
+        reports: watch.reports,
+      });
+    }
+
+    const here = this.player.tileCoords(this.tileScratch);
+    // Seated means at your own seat and still — the one place a partition can
+    // actually hide you.
+    const seated =
+      !this.presence.moving && here.x === PLACES.playerCubicle.x && here.y === PLACES.playerCubicle.y;
+    this.watched = watchedBy(this.opacity, this.observerPool, here.x, here.y, seated);
+  }
+
   /** Rebuilt in place each minute. Posture is derived, never latched. */
   private samplePresence(): PresenceSample {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
@@ -687,6 +740,8 @@ export class OfficeScene extends Phaser.Scene {
     this.presence.speakerToday = this.director.speakerChargedToday;
     this.presence.tileX = here.x;
     this.presence.tileY = here.y;
+    this.presence.eyes = this.watched.eyes;
+    this.presence.screenSeen = this.watched.screen;
     return this.presence;
   }
 

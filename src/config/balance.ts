@@ -428,6 +428,24 @@ export const BALANCE = {
      * broken and teaches the player nothing.
      */
     ambientWeight: 0.45,
+
+    /**
+     * Who is looking, how much their attention costs you, and whether they file
+     * reports. Only reporters can catch you.
+     *
+     * Dale is management. Pat reads the handbook twice and knows which form it
+     * would be — she is the snitch her own dialogue describes. Marjorie sees
+     * everything and reports none of it, which is exactly her character:
+     * "I know what's in everyone's out-tray. I don't read them. I don't have to."
+     * Flip `reports` on any of them and the office changes shape, from here.
+     */
+    observers: {
+      dale: { attention: 1.0, reports: true },
+      pat: { attention: 0.55, reports: true },
+      marjorie: { attention: 0.4, reports: false },
+      steve: { attention: 0.25, reports: false },
+      dennis: { attention: 0.2, reports: false },
+    } as Record<string, { attention: number; reports: boolean }>,
   },
 
   /** Comedic degradation thresholds. Never a hard fail. */
