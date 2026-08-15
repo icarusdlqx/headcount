@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, css } from './palette';
 import { TILE, TILE_COUNT } from '../world/tiles';
 import { makeRng } from '../util/rng';
+import { CHAR_DIRECTIONS, CHAR_FRAME_H, CHAR_FRAME_W, type CharDirection } from './charFrames';
 
 /**
  * Procedural placeholder art.
@@ -16,12 +17,11 @@ export const TILESET_KEY = 'tiles';
 export const PLAYER_KEY = 'player';
 
 export const TILE_SIZE = 32;
-export const CHAR_FRAME_W = 24;
-export const CHAR_FRAME_H = 32;
 
-/** Frame layout of the generated character sheet: 4 directions x 3 frames. */
-export const CHAR_DIRECTIONS = ['down', 'up', 'left', 'right'] as const;
-export type CharDirection = (typeof CHAR_DIRECTIONS)[number];
+// Geometry and facings live in a Phaser-free module so src/sim can import them
+// without pulling the engine into a node test process. Re-exported here so
+// existing call sites are unaffected.
+export { CHAR_DIRECTIONS, CHAR_FRAME_H, CHAR_FRAME_W, type CharDirection } from './charFrames';
 
 type Ctx = CanvasRenderingContext2D;
 
