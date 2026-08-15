@@ -1,0 +1,228 @@
+{
+  "_comment": "The cast's every spoken word. Writers own this file; no code changes required to edit any of it. Ids match src/sim/npcRoster.ts. Chatter pools are drawn with the seeded RNG and never repeat within a day. {player} is never used — nobody here knows your name, which is the joke.",
+
+  "names": {
+    "steve": "Steve",
+    "marjorie": "Marjorie",
+    "dennis": "Dennis",
+    "pat": "Pat",
+    "dale": "Dale"
+  },
+
+  "titles": {
+    "steve": "Sales",
+    "marjorie": "Mail & Records",
+    "dennis": "Information Technology",
+    "pat": "Accounting",
+    "dale": "Regional Manager (Acting)"
+  },
+
+  "chatter": {
+    "steve": [
+      "You ever notice the vending machine gives you an extra one if you buy at 4:55? I don't make the rules.",
+      "I told Regional I'd have it Thursday. I didn't say which Thursday.",
+      "Big weekend. Big, big weekend. Can't say more. Legal reasons. I'm joking. It's a boat show.",
+      "They moved my parking space. Not to anywhere. Just off the list.",
+      "If anyone asks, we had this conversation about the Q3 numbers.",
+      "I've been here nine years. I've been in this chair four hours.",
+      "Do you ever think about how the fax just — goes? Into the wall? And comes out somewhere?",
+      "My doctor says I should stand more. So I've been taking longer lunches."
+    ],
+    "marjorie": [
+      "Interoffice goes in the grey tray. The grey one. I won't say it again, but I will.",
+      "Twenty-two years. I've outlasted four managers and one entire floor.",
+      "There's a memo coming about the memos. I've seen the draft. It's not good.",
+      "Dale's on his second coffee and it's not ten. Make of that what you will.",
+      "They used to have a Christmas party. Then someone brought a guitar.",
+      "I know what's in everyone's out-tray. I don't read them. I don't have to.",
+      "The plant by the boss's office is plastic. I dust it anyway. It's not the plant's fault.",
+      "Pat submitted an expense for a stapler. Itemised. Two pages.",
+      "Whatever you've heard about the fourth floor, halve it, then believe the half."
+    ],
+    "dennis": [
+      "Is it plugged in. I have to ask. I'm required to ask.",
+      "That's a known issue. It's been known for some time.",
+      "I can raise a ticket. The ticket will go to me. I'll see it tomorrow.",
+      "The server room is at nineteen degrees. It's the only honest room in the building.",
+      "Someone microwaved fish and it got into the ventilation and now it's in the backups. Conceptually.",
+      "Have you tried turning it off. And then leaving it off. And going home.",
+      "I don't fix printers. I've never fixed a printer. Printers are a rumour.",
+      "Your password expires in four days. It expired four days ago. Both are true."
+    ],
+    "pat": [
+      "Receipts must be attached. Not stapled through the total. Through the margin.",
+      "That's a Form 7. You've filled in a Form 7-A. They are extremely different.",
+      "I have flagged it. Flagging is not escalating. Escalating is a separate form.",
+      "The thermostat is set to twenty-one. It has always been twenty-one. It will remain twenty-one.",
+      "I don't take lunch at noon. Everyone takes lunch at noon. I take lunch at 12:15.",
+      "Mileage is reimbursed at the rate in effect on the date of travel, not the date of claim.",
+      "I've read the handbook. All of it. Twice. There's a typo on page forty and it haunts me.",
+      "You can't expense a coffee unless someone else drinks one too. That's not my rule."
+    ],
+    "dale": [
+      "Good, good. Keep at it. Whatever it is.",
+      "I like to walk the floor. Keeps me close to the work. Close to the people.",
+      "We're all one team. Some of us are more one team than others.",
+      "I don't want to hear problems. I want to hear solutions. Or nothing. Nothing's fine.",
+      "Big picture? Big picture, we're fine. Don't look at the small picture."
+    ]
+  },
+
+  "stories": {
+    "_comment": "The long one. Sitting through it costs real in-game minutes and earns a favor token. Each has a mid-point where the player could leave, which is the whole design: the favour is that you didn't.",
+    "steve": {
+      "open": "Oh — do you follow fantasy? Because I have to tell somebody about my running back.",
+      "middle": "So I trade Dwayne. I trade Dwayne on the Tuesday. And you know what happens on the Wednesday.",
+      "end": "Anyway he's out for the season. Thanks for listening. Genuinely. Nobody else does.",
+      "leave": "No, no. Go. You're busy. Everyone's busy."
+    },
+    "marjorie": {
+      "open": "Sit down a moment. Did I ever tell you about the fire drill of '91?",
+      "middle": "Nobody told the fourth floor. So they're standing in the car park in February, and one of them is holding a cake.",
+      "end": "That's why the alarm is on the OTHER wall now. Everything in this building is like that. Everything.",
+      "leave": "Go on then. It's a better story when you've got time for it."
+    },
+    "dennis": {
+      "open": "You're the third person today. Do you want to know what the actual problem is?",
+      "middle": "It's the phone system. It's always the phone system. They bought it in '89 and it has opinions.",
+      "end": "So no, I can't fix it. Nobody can fix it. We're just its neighbours now. Nice of you to hear me out.",
+      "leave": "Sure. Everyone leaves at that part."
+    },
+    "pat": {
+      "open": "While you're here. There's something in the handbook you should probably know.",
+      "middle": "Section four. Subsection C. It contradicts subsection A, and both are still in force.",
+      "end": "I wrote to Head Office about it in 1993. I keep the reply in my drawer. Thank you for listening.",
+      "leave": "That's alright. It's a lot. It's genuinely a lot."
+    }
+  },
+
+  "greetings": {
+    "_comment": "One line when a conversation opens, before options. Varies by how much favor the player holds with that person — the relationship is legible in how they greet you before any number is shown.",
+    "cold": {
+      "steve": "Oh. Hey. Hey.",
+      "marjorie": "Mm.",
+      "dennis": "…Yes?",
+      "pat": "Yes. What is it.",
+      "dale": "Ah. You."
+    },
+    "neutral": {
+      "steve": "Hey! You're the one who's always at the fax.",
+      "marjorie": "There you are. Hold this a second.",
+      "dennis": "Don't. Whatever it is. Don't.",
+      "pat": "You've caught me between things. Briefly.",
+      "dale": "There he is. Working hard, I see."
+    },
+    "warm": {
+      "steve": "My guy. My actual guy.",
+      "marjorie": "Come here, you. I've got one for you.",
+      "dennis": "Oh, it's you. Fine. Fine, come in.",
+      "pat": "I've been meaning to catch you, actually. In a good way.",
+      "dale": "There he is. Whatever you're doing, keep doing it."
+    }
+  },
+
+  "steveScenario": {
+    "_comment": "THE scene. Steve leaves at 11:40 for a 'quick lunch' and returns at 2:15. Dale asks after him at a seeded point in between. This is the game's first real moral compromise and every branch must cost something.",
+
+    "ask": {
+      "open": "Listen. Listen. Are you doing anything for the next two hours?",
+      "detail": "Because I'm not going to be doing anything for the next two hours. Officially I'm at the printer.",
+      "stack": "There's a stack on my desk. It's four faxes. It's nothing. If Dale asks, I'm at the printer and the stack is handled."
+    },
+
+    "choices": {
+      "cover": "\"You're at the printer. I'll do the stack.\"",
+      "coverPartial": "\"You're at the printer. I'm not touching the stack.\"",
+      "decline": "\"I'm not lying to Dale for you.\"",
+      "needle": "\"How long is this lunch, Steve?\""
+    },
+
+    "replies": {
+      "cover": "You're a good one. You're one of the good ones. I'll remember this.",
+      "coverPartial": "That's fair. That's more than fair. The stack can rot, honestly.",
+      "decline": "No — no, that's fine. That's completely fine. Forget I said anything.",
+      "needle": "It's a lunch. It's a normal-length lunch. It's a lunch with a drive attached."
+    },
+
+    "daleAsks": {
+      "open": "You seen Steve? I've been past his desk twice.",
+      "choices": {
+        "cover": "\"He's at the printer.\"",
+        "shrug": "\"I haven't seen him.\"",
+        "report": "\"He left at twenty to twelve.\""
+      },
+      "replies": {
+        "coverBelieved": "Right. Right. The printer.",
+        "coverChecked": "The printer. I've just come from the printer.",
+        "shrug": "Mm. Nobody's seen him. Remarkable, that.",
+        "report": "Twenty to twelve. Well. Thank you for being straight with me. I'll remember that."
+      }
+    },
+
+    "aftermath": {
+      "steveGrateful": "Heard you held the line. Anything you need. Anything.",
+      "steveBurned": "…Yeah. Hey.",
+      "steveBurnedLater": "I'm not angry. I want to be clear that I'm not angry.",
+      "caughtOut": "So Steve's at the printer, is he. I'll let you sit with that one.",
+      "stackUnsent": "The stack's still on my desk. It's fine. I'm not — it's fine."
+    }
+  },
+
+  "favors": {
+    "_comment": "How a token is granted and spent. The grant line must land as a MOMENT, not as a number ticking up — a token with no memorable acquisition is bookkeeping.",
+    "granted": {
+      "steve": "Steve owes you one. He has said so, twice, at volume.",
+      "marjorie": "Marjorie owes you one. She will not forget. She has never forgotten anything.",
+      "dennis": "Dennis owes you one. He'd deny it, but he's written it down somewhere.",
+      "pat": "Pat owes you one. It has been logged, correctly, on the appropriate form."
+    },
+    "spend": {
+      "steve": "\"Steve. That thing you owe me.\"",
+      "marjorie": "\"Marjorie. What do you know?\"",
+      "dennis": "\"Dennis. Off the record.\"",
+      "pat": "\"Pat. Hypothetically.\""
+    },
+    "none": {
+      "steve": "He'd want to. He would. He just wouldn't.",
+      "marjorie": "\"Ask me when you've earned it, love.\"",
+      "dennis": "\"No.\"",
+      "pat": "\"That would be inappropriate at this time.\""
+    },
+    "capped": {
+      "steve": "Steve cannot owe you more than he already does. It's a lot for him.",
+      "marjorie": "\"You're well in credit. Spend some of it.\"",
+      "dennis": "\"We're square several times over. It's uncomfortable.\"",
+      "pat": "\"Your balance is at the documented maximum.\""
+    }
+  },
+
+  "sinks": {
+    "_comment": "What a token BUYS at M4, using only what the game already contains: the fax machine, the clock, the boss and five meters. Everything here is real today — nothing is a promise against M5 or M6.",
+    "marjorie": {
+      "label": "Ask what Dale's mood is",
+      "line": "\"He's had the second coffee. Stay at your desk until three and he'll walk right past you.\"",
+      "effect": "Reveals when Dale's next two aisle walks are, for the rest of the day."
+    },
+    "dennis": {
+      "label": "Ask about the fax machine",
+      "line": "\"Dial nine first. Everyone knows that. Nobody was told it.\"",
+      "effect": "Teaches one unlearned fax fact outright."
+    },
+    "steve": {
+      "label": "Ask him to take a job off your tray",
+      "line": "\"Say no more. Give me the ugly one.\"",
+      "effect": "Removes one job from today's tray at no time cost. He may not actually send it."
+    },
+    "pat": {
+      "label": "Ask her to sign off early",
+      "line": "\"I'll date it as received this morning. I'm not comfortable. But I'll do it.\"",
+      "effect": "One fax counts as sent without walking there."
+    }
+  },
+
+  "decay": {
+    "_comment": "People forget. Narrated on the Friday BEFORE it happens rather than the Monday after, so it reads as a relationship cooling rather than the game taking something.",
+    "warning": "You have not spoken to {name} all week. That is the sort of thing that gets noticed, quietly.",
+    "lapsed": "{name} has stopped mentioning that thing you did. It has passed into the general past."
+  }
+}
