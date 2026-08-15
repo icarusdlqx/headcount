@@ -204,6 +204,11 @@
       "label": "Ask her to sign one off",
       "line": "\"I'll date it as received this morning. I'm not comfortable. But I'll do it.\"",
       "exhausted": "\"There's nothing outstanding to date. Which is how it should be.\""
+    },
+    "steve_lookout": {
+      "label": "Ask him to keep an eye out",
+      "line": "\"Say no more. If he heads your way, you'll know about it.\"",
+      "exhausted": "\"I've already coughed for you once today. People are noticing the cough.\""
     }
   },
   "decay": {
@@ -221,5 +226,57 @@
     "optionLeave": "Get back to it",
     "pick": "1-4 to choose  ·  Esc — walk away",
     "noMoreWalks": "he's done his rounds for today"
+  },
+  "fluff": {
+    "_comment": "Getting caught. Silence is the COMMON case — Dale looking, saying nothing and walking on is the whole joke about this office — so `silent` fires most of the time and the written lines are the rare payoff. Tier lines escalate with today's offence count.",
+    "silent": [
+      "Dale slows as he passes. He does not look at the screen. He does not need to.",
+      "Dale glances down, then away, and keeps walking. Nothing is said. Nothing will be.",
+      "He pauses at the mouth of your cubicle for exactly one second longer than a person would."
+    ],
+    "first": [
+      "\"Good, good. Keep at it.\" He has already gone.",
+      "\"Don't let me interrupt.\" He waits until you close it. Then he waits a bit longer.",
+      "\"I'm not going to say anything. I'm just going to have known.\""
+    ],
+    "repeat": [
+      "\"Second time today. I'm counting, which is the part you should mind.\"",
+      "\"You know what, I admire the commitment. To the cards, I mean.\"",
+      "\"We should get you something to do. I'll think about what.\""
+    ],
+    "pat": [
+      "Pat notes something on a pad. She does not look up. There will be a form.",
+      "\"I'm not going to escalate this. Escalating is a separate process.\""
+    ],
+    "warn": "Someone is looking this way.",
+    "tipoff": "{name} coughs, twice, deliberately.",
+    "gotAway": "He's gone. Your hand is still there.",
+    "lookoutBought": "\"Say no more. If he heads your way, you'll know about it.\"",
+    "lookoutSpent": "{name} has already coughed for you once today. He looks tired.",
+    "venue": {
+      "cooler": "You stand near the cooler and let a few minutes go by.",
+      "bathroom": "Nobody can see the bathroom. That is its entire appeal."
+    },
+    "cards": {
+      "_comment": "Rank glyphs are player-facing text, so they live here. ranks.length must equal BALANCE.fluff.solitaire.ranksPerSuit.",
+      "ranks": [
+        "A",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "suits": [
+        "♠",
+        "♥",
+        "♣",
+        "♦"
+      ],
+      "title": "Solitaire",
+      "hint": "←→ pick  ·  ↑ to foundation  ·  Space draw  ·  Esc close",
+      "won": "You have won. Nobody will ever know.",
+      "stuck": "No moves. Space to redeal."
+    }
   }
 }

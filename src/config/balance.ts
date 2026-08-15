@@ -251,6 +251,77 @@ export const BALANCE = {
     talkRadius: 2.2,
   },
 
+  /**
+   * Fluffing: not working, and getting away with it.
+   *
+   * Assumption 19 deferred all in-day Strain recovery to this milestone, on the
+   * grounds that pricing a hiding place before hiding is risky ships a dominant
+   * strategy on purpose. This is where that debt is paid.
+   */
+  fluff: {
+    venues: {
+      /** The card game. A SCREEN offence: someone must be able to read your
+       *  monitor, which is why the boss parked beside you facing away is safe
+       *  and the boss walking toward you is not. */
+      solitaire: {
+        stressPerMinute: 0.55,
+        /** Screen exposure that counts as "being read". */
+        noticeAt: 0.6,
+        /** Consecutive minutes before it lands. His approach gives one clear
+         *  minute and his departure two, so at 2 only the departure catches you
+         *  — you get one free pass per walkthrough, which is the grace the
+         *  design needs to stay fair. */
+        noticeMinutes: 2,
+      },
+      /** Standing at the cooler. A BODY offence — nobody has to read anything.
+       *  Slower recovery than cards because it is more boring. */
+      cooler: { stressPerMinute: 0.4, noticeAt: 0.55, noticeMinutes: 6 },
+      /**
+       * The bathroom. Nobody on the floor can see it, so it cannot be caught at
+       * all — it is the safe lane, and it is priced in the two currencies that
+       * are not risk: an eleven-minute round trip, and Boss Approval bleeding
+       * the whole time you are gone.
+       */
+      bathroom: { stressPerMinute: 0.75, noticeAt: 2, noticeMinutes: 999 },
+    } as Record<string, { stressPerMinute: number; noticeAt: number; noticeMinutes: number }>,
+
+    /** Attention fades rather than resetting, so pacing in and out of a
+     *  sightline cannot launder an hour of Solitaire. */
+    dwellDecayPerMinute: 1,
+
+    /** A boss who says nothing is funnier than a boss with a line, so silence is
+     *  the common case and the writing is the rare one. */
+    silentChance: 0.6,
+    /** ...until it keeps happening, at which point he does have to say something. */
+    alwaysSpeaksFrom: 3,
+
+    /**
+     * What being caught costs. Deliberately small in meters: the real sting is
+     * losing the hand you were enjoying, which costs nothing and stings exactly
+     * right. Piling on numbers is the game raising its voice.
+     */
+    caughtStanding: -6,
+    caughtStress: 3,
+    /** He stands there. You wait. */
+    caughtMinutes: 3,
+
+    /** The lookout: one warning, once, for a favour. */
+    lookoutId: 'steve',
+
+    /**
+     * The card game. Four suits of six ranks in four piles — twenty-four cards,
+     * small enough to win in a few minutes and real enough that winning means
+     * something. Full Klondike is the size of the fax machine, which was a whole
+     * milestone, and nothing here depends on it: the tension comes from the man
+     * in the aisle, not from the card rules.
+     */
+    solitaire: {
+      suits: 4,
+      ranksPerSuit: 6,
+      piles: 4,
+    },
+  },
+
   /** Conversations and the favor ledger. */
   dialogue: {
     /** Sitting through somebody's story costs real in-game minutes. That charge

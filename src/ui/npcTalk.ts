@@ -32,6 +32,26 @@ interface NpcContent {
   };
   ui: Record<string, string>;
   sinks: Record<string, { label: string; line: string; exhausted: string }>;
+  fluff: {
+    silent: string[];
+    first: string[];
+    repeat: string[];
+    pat: string[];
+    warn: string;
+    tipoff: string;
+    gotAway: string;
+    lookoutBought: string;
+    lookoutSpent: string;
+    venue: Record<string, string>;
+    cards: {
+      ranks: string[];
+      suits: string[];
+      title: string;
+      hint: string;
+      won: string;
+      stuck: string;
+    };
+  };
   steveScenario: {
     ask: Record<string, string>;
     choices: Record<string, string>;

@@ -30,6 +30,9 @@ import type { PlanLeg } from '../sim/npcSchedule';
 import { isFavorNpc } from '../sim/npcRoster';
 import { assertVisibilityCoverage, type PresenceSample } from '../sim/meters';
 import { buildOpacityGrid, watchedBy, type Observer, type Watched } from '../sim/sight';
+import { SolitaireBoard, type BoardKey } from '../ui/SolitaireBoard';
+import { deal, type SolitaireState } from '../sim/solitaire';
+import { catchIsSilent, createWatchState, stepWatch, stressDelta, type FluffVenue, type WatchState } from '../sim/fluff';
 
 import { misdialReplyDeltas } from '../sim/faxTray';
 import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
@@ -99,7 +102,7 @@ export class OfficeScene extends Phaser.Scene {
   private chatCounts = new Map<string, number>();
   private lastTrayCount = -1;
   /** What each numbered option in the open menu does. */
-  private menuActions: ('listen' | 'spend' | 'leave')[] = [];
+  private menuActions: ('listen' | 'spend' | 'lookout' | 'leave')[] = [];
 
   /** Reused every minute so the meter step allocates nothing. Posture is derived
    *  fresh each time from the pause stack rather than latched by the fax scene:
@@ -123,6 +126,13 @@ export class OfficeScene extends Phaser.Scene {
   /** One reused observer slot per actor: five people, zero allocations a minute. */
   private readonly observerPool: Observer[] = [];
   private watched: Watched = { eyes: 0, screen: 0, watcherId: null };
+
+  private board!: SolitaireBoard;
+  /** The hand SURVIVES closing the board. Close, watch Dale pass, reopen to the
+   *  same cards — that persistence is the best thing in the milestone. */
+  private hand: SolitaireState | null = null;
+  private readonly watch: WatchState = createWatchState();
+  private lookoutReady = false;
 
   constructor() {
     super('Office');
@@ -190,14 +200,24 @@ export class OfficeScene extends Phaser.Scene {
     this.hud = new Hud(this);
 
     this.dialogue = new DialogueBox(this);
+    this.board = new SolitaireBoard(this);
 
     this.input.keyboard?.on('keydown-E', this.interact, this);
     this.input.keyboard?.on('keydown-SPACE', this.interact, this);
     this.input.keyboard?.on('keydown-ENTER', this.interact, this);
     this.input.keyboard?.on('keydown-ESC', this.leaveTalk, this);
     (['ONE', 'TWO', 'THREE', 'FOUR'] as const).forEach((name, index) => {
-      this.input.keyboard?.on(`keydown-${name}`, () => this.chooseOption(index));
+      this.input.keyboard?.on(`keydown-${name}`, () => {
+        if (this.board.isOpen) {
+          this.board.pressPile(index);
+          return;
+        }
+        this.chooseOption(index);
+      });
     });
+    this.input.keyboard?.on('keydown-LEFT', () => this.routeToBoard('left'));
+    this.input.keyboard?.on('keydown-RIGHT', () => this.routeToBoard('right'));
+    this.input.keyboard?.on('keydown-UP', () => this.routeToBoard('up'));
 
     this.wireDirector();
     this.wireWindowFocus();
@@ -285,6 +305,7 @@ export class OfficeScene extends Phaser.Scene {
     sample.eyes = this.watched.eyes;
     sample.screenSeen = this.watched.screen;
     this.director.stepMeters(sample);
+    this.stepFluff();
     this.hud.setMeters(this.director.meters);
 
     // The bill for a misdial, arriving back at your desk long after you felt
@@ -313,8 +334,9 @@ export class OfficeScene extends Phaser.Scene {
   }
 
   private endOfDay(info: DayEndInfo): void {
-    // Five o'clock does not care that you were mid-anecdote.
+    // Five o'clock does not care that you were mid-anecdote or mid-hand.
     if (this.talk) this.closeTalk();
+    if (this.board.isOpen) this.closeBoard();
     // Otherwise a stale flavour line sits frozen under the modal, and its timer
     // hides the next morning's opener early.
     this.hud.clear();
@@ -335,7 +357,9 @@ export class OfficeScene extends Phaser.Scene {
   private onClockReleased(): void {
     if (this.scene.isPaused()) this.scene.resume();
     if (this.director.pause.running) {
-      this.time.delayedCall(BALANCE.dayEnd.resumeInputLockMs, () => this.player.setFrozen(false));
+      this.time.delayedCall(BALANCE.dayEnd.resumeInputLockMs, () => {
+        if (!this.board.isOpen) this.player.setFrozen(false);
+      });
       // The natural post-modal resync point: without it the fax's Productivity
       // gain is invisible until the next minute ticks, which is the whole payoff.
       this.hud.setMeters(this.director.meters);
@@ -394,6 +418,12 @@ export class OfficeScene extends Phaser.Scene {
       options.push(`${NPC_TEXT.favors.spend[id] ?? ''}  (${favor})`);
       this.menuActions.push('spend');
     }
+    // The lookout: Steve watches your back for one cough. Only he offers it —
+    // it is exactly the favour a man who is never at his desk can provide.
+    if (id === BALANCE.fluff.lookoutId && favor > 0 && !this.lookoutReady) {
+      options.push(NPC_TEXT.sinks['steve_lookout']?.label ?? '');
+      this.menuActions.push('lookout');
+    }
     options.push(NPC_TEXT.ui['optionLeave'] ?? '');
     this.menuActions.push('leave');
 
@@ -416,6 +446,14 @@ export class OfficeScene extends Phaser.Scene {
     }
     if (action === 'spend') {
       this.spendFavor(id);
+      return;
+    }
+    if (action === 'lookout') {
+      this.director.spendFavor(id);
+      this.director.spendMinutes(BALANCE.dialogue.sinks.minutes);
+      this.lookoutReady = true;
+      this.talk = { id, stage: 'end' };
+      this.dialogue.say(NPC_TEXT.fluff.lookoutBought, NPC_TEXT.ui['close'] ?? '');
       return;
     }
     this.closeTalk();
@@ -571,6 +609,102 @@ export class OfficeScene extends Phaser.Scene {
     this.dialogue.say(line, NPC_TEXT.ui['close'] ?? '');
   }
 
+  // --- the card table ------------------------------------------------------
+
+  /**
+   * Opening holds NOTHING. The clock keeps running, the cast keeps walking, and
+   * the boss can arrive behind you — which is the whole mechanic. The player is
+   * frozen directly, which is independent of the pause stack.
+   */
+  private openBoard(): void {
+    if (!this.hand) this.hand = deal(this.director.rng(`day:${this.director.state.dayIndex}:cards`));
+    this.hud.clear();
+    this.player.setFrozen(true);
+    this.board.open(this.hand);
+    this.board.setExposure(this.watched.screen);
+  }
+
+  /** The hand is kept. That persistence is the point. */
+  private closeBoard(): void {
+    this.board.hide();
+    this.player.setFrozen(false);
+    // Attention stops accruing the moment you stop.
+    this.watch.dwell = 0;
+    this.watch.venue = null;
+  }
+
+  /** What the player is currently doing that they would have to explain. */
+  private currentVenue(): FluffVenue | null {
+    if (this.board.isOpen) return 'solitaire';
+    if (this.lastRoom === 'Bathroom') return 'bathroom';
+    if (this.facingTileIs(TILE.COOLER)) return 'cooler';
+    return null;
+  }
+
+  /** One minute of being watched while not working. */
+  private stepFluff(): void {
+    const venue = this.currentVenue();
+
+    if (venue !== null) {
+      this.director.applyDeltas([{ key: METER.stress, delta: stressDelta(venue) }]);
+    }
+
+    const result = stepWatch(this.watch, {
+      venue,
+      screen: this.watched.screen,
+      eyes: this.watched.eyes,
+      watcherId: this.watched.watcherId,
+      lookout: this.lookoutReady,
+    });
+
+    if (this.board.isOpen) this.board.setExposure(this.watched.screen);
+
+    if (result.kind === 'tipoff') {
+      // Steve earns his favour. One cough, once.
+      this.lookoutReady = false;
+      this.hud.say(fill(NPC_TEXT.fluff.tipoff, { name: nameFor(BALANCE.fluff.lookoutId) }));
+      return;
+    }
+    if (result.kind === 'warn') {
+      // Only speak up on the first minute, or the message line becomes a siren.
+      if (result.dwell === 1 && !this.board.isOpen) this.hud.say(NPC_TEXT.fluff.warn);
+      return;
+    }
+    if (result.kind === 'caught') this.applyCatch(result.watcherId, result.offence);
+  }
+
+  /**
+   * Caught. The hand is destroyed and the meter cost is deliberately small: the
+   * sting is losing the game you were enjoying, which costs nothing and stings
+   * exactly right. Piling numbers on top is the game raising its voice.
+   */
+  private applyCatch(watcherId: string, offence: number): void {
+    const fluffText = NPC_TEXT.fluff;
+    const rng = this.director.rng(`day:${this.director.state.dayIndex}:caught:${offence}`);
+
+    this.board.hide();
+    this.player.setFrozen(false);
+    this.hand = null;
+
+    const pool =
+      watcherId === 'pat'
+        ? fluffText.pat
+        : catchIsSilent(offence, rng.next())
+          ? fluffText.silent
+          : offence > 1
+            ? fluffText.repeat
+            : fluffText.first;
+
+    this.hud.say(rng.pick(pool), BALANCE.ui.noticeHoldMs);
+    this.director.applyDeltas([
+      { key: METER.bossApproval, delta: BALANCE.fluff.caughtStanding },
+      { key: METER.stress, delta: BALANCE.fluff.caughtStress },
+    ]);
+    this.hud.setMeters(this.director.meters);
+    this.director.spendMinutes(BALANCE.fluff.caughtMinutes);
+    this.watch.resolving = false;
+  }
+
   /** The nearest visible cast member within arm's reach, or null. */
   private nearestTalkableNpc(): Npc | null {
     const radius = BALANCE.npc.talkRadius * BALANCE.view.tileSize;
@@ -673,6 +807,11 @@ export class OfficeScene extends Phaser.Scene {
    *  message, which is the design — the option to leave is what makes staying
    *  a favour. */
   private leaveTalk(): void {
+    // Esc closes the board first, and the hand is kept.
+    if (this.board.isOpen) {
+      this.closeBoard();
+      return;
+    }
     if (!this.talk) return;
     const story = storyFor(this.talk.id);
     if (this.talk.stage === 'offer' && story) {
@@ -772,6 +911,12 @@ export class OfficeScene extends Phaser.Scene {
     this.lastRoom = '';
     this.storiesHeard.clear();
     this.chatCounts.clear();
+    this.hand = null;
+    this.lookoutReady = false;
+    this.watch.dwell = 0;
+    this.watch.venue = null;
+    this.watch.caughtToday = 0;
+    if (this.board.isOpen) this.closeBoard();
     this.lastTrayCount = -1;
     this.hud.clear();
   }
@@ -795,7 +940,15 @@ export class OfficeScene extends Phaser.Scene {
    * E does the most specific thing available: use the fax machine if you are at
    * it, otherwise look at whatever you are facing.
    */
+  /** One router, three tiers: board outranks conversation outranks world. */
+  private routeToBoard(key: BoardKey): boolean {
+    if (!this.board.isOpen) return false;
+    this.board.press(key);
+    return true;
+  }
+
   private interact(): void {
+    if (this.routeToBoard('confirm')) return;
     // An open conversation captures E before anything else — the 'dialogue'
     // pause reason holds the clock, so the pause.running check below would
     // otherwise eat the keypress that is supposed to advance the chat.
@@ -805,6 +958,15 @@ export class OfficeScene extends Phaser.Scene {
     }
 
     if (!this.director.pause.running) return;
+
+    // Your own seat, facing your own desk: the card table. Checked BEFORE the
+    // NPC and fax branches, or somebody standing in your cubicle mouth makes the
+    // board unopenable.
+    const here = this.player.tileCoords(this.tileScratch);
+    if (here.x === PLACES.playerCubicle.x && here.y === PLACES.playerCubicle.y && this.facingTileIs(TILE.DESK)) {
+      this.openBoard();
+      return;
+    }
 
     const npc = this.nearestTalkableNpc();
     if (npc) {
