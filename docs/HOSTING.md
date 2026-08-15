@@ -22,11 +22,42 @@ the single most common reason a successful deploy appears not to work.
 | Field | Value |
 | --- | --- |
 | Build command | `npm run build` |
-| Build output directory | `dist` |
+| Deploy command | `npx wrangler deploy` |
 | Production branch | `main` |
 
 Node version comes from `.node-version` in the repository root, so there is
 nothing to set for it.
+
+### wrangler.jsonc is not optional
+
+A Worker build runs the build command and then `wrangler deploy`. That second
+step reads `wrangler.jsonc` to learn there is no server-side script here, just a
+directory of files:
+
+```jsonc
+{
+  "name": "headcount",
+  "compatibility_date": "2026-08-01",
+  "assets": { "directory": "./dist" }
+}
+```
+
+Without that file the build compiles fine and the deploy fails, which looks like
+"the build failed" while the placeholder Worker carries on serving **Hello
+world** at the live URL.
+
+`"name"` must match the Worker in the dashboard. If it does not, the deploy
+creates a *second* Worker and the URL you already have keeps serving the
+placeholder.
+
+Validate any change to it without deploying, and without credentials:
+
+```sh
+npx wrangler deploy --dry-run
+```
+
+An older-style Pages project does not need this file at all, which is why
+IRONLINE does not have one.
 
 `npm run build` runs `tsc --noEmit` before Vite, so a type error fails the
 Cloudflare build and never reaches the live site.

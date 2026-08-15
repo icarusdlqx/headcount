@@ -1,0 +1,13 @@
+{
+  // Cloudflare builds this repo as a Worker serving static assets. It runs
+  // `npm run build`, then `wrangler deploy` — and that second step needs this
+  // file to know there is no server-side script, just a directory of files.
+  //
+  // "name" must match the Worker in the dashboard, or the deploy creates a
+  // second one and the URL you already have keeps serving the placeholder.
+  "name": "headcount",
+  "compatibility_date": "2026-08-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
