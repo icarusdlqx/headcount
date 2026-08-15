@@ -58,12 +58,12 @@ export const SCHEDULES: Readonly<Record<ActorId, readonly ScheduleBlock[]>> = {
   marjorie: [
     { at: 0, place: 'mailDesk' },
     { at: 40, place: 'printerRoom' },
-    { at: 70, place: 'playerCubicle' },
+    { at: 70, place: 'playerCubicleMouth' },
     { at: 100, place: 'conferenceRoom' },
     { at: 140, place: 'mailDesk' },
     { at: 230, place: 'breakRoom' },
     { at: 270, place: 'printerRoom' },
-    { at: 300, place: 'playerCubicle' },
+    { at: 300, place: 'playerCubicleMouth' },
     { at: 340, place: 'mailDesk' },
   ],
 
@@ -173,10 +173,20 @@ export function buildDayPlan(router: Router, rng: Rng): DayPlan {
 
       const path = router.between(fromX, fromY, dest.x, dest.y);
       const tiles = pathTiles(path);
+      const wanted = Math.max(1, Math.round((tiles - 1) * BALANCE.npc.minutesPerTile));
+
+      // Clamp so the walk always completes before the next appointment. Without
+      // this an NPC is pulled onto the next route mid-stride and appears to
+      // teleport, because every route is planned from the station they were
+      // supposed to have reached.
+      const nextBlock = blocks[index + 1];
+      const gap = nextBlock ? Math.max(1, nextBlock.at + wobble - startMinute) : Number.MAX_SAFE_INTEGER;
+      const travelMinutes = Math.max(1, Math.min(wanted, Math.floor(gap * BALANCE.npc.maxTravelFractionOfGap)));
+
       legs.push({
         startMinute,
         path,
-        travelMinutes: Math.max(1, Math.round((tiles - 1) * BALANCE.npc.minutesPerTile)),
+        travelMinutes,
         offFloor: false,
         facing: ROSTER[id].restFacing,
       });

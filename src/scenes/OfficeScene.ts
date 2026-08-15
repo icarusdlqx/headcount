@@ -122,6 +122,9 @@ export class OfficeScene extends Phaser.Scene {
     this.player = new Player(this, spawn.x * size + size / 2, spawn.y * size + size / 2);
     this.physics.add.collider(this.player, this.groundLayer);
 
+    // Depth by row so people in front of you draw over you and people behind
+    // draw under. NPCs set theirs per frame from their tile Y.
+    this.player.setDepth(PLACES.playerCubicle.y);
     this.cameras.main.setBounds(0, 0, worldW, worldH);
     this.cameras.main.startFollow(this.player, true, BALANCE.view.cameraLerp, BALANCE.view.cameraLerp);
     this.cameras.main.setRoundPixels(true);
@@ -129,7 +132,13 @@ export class OfficeScene extends Phaser.Scene {
     // Routes are derived from the real grid at boot and memoised per goal, so a
     // map edit re-routes the whole cast instead of walking them through a wall.
     this.director.installRouter(new Router(grid));
-    for (const id of ACTOR_IDS) this.cast.push(new Npc(this, id, `npc-${id}`));
+    for (const id of ACTOR_IDS) {
+      const npc = new Npc(this, id, `npc-${id}`);
+      // Solid. Immovable, so a colleague crossing your path stops you rather
+      // than shoving you through a partition.
+      this.physics.add.collider(this.player, npc);
+      this.cast.push(npc);
+    }
 
     this.overlay = createFluorescentOverlay(this);
     this.hud = new Hud(this);

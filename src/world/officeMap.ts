@@ -84,6 +84,9 @@ export const PLACES = {
   bossDesk: { x: 5, y: 4, label: "Dale's desk" },
   /** The middle of the cubicle farm, where Dale's walkthrough passes. */
   farmAisle: { x: 19, y: 5, label: 'The aisle' },
+  /** Just outside your cubicle. Marjorie stops HERE rather than on your own
+   *  tile — people are solid, and she must not park where you spawn. */
+  playerCubicleMouth: { x: 16, y: 5, label: 'Outside your cubicle' },
 } as const;
 
 export type PlaceKey = keyof typeof PLACES;

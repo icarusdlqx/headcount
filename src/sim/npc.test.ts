@@ -112,8 +112,48 @@ describe('poses are a pure function of the clock', () => {
   it('brings Marjorie past the player twice a day', () => {
     // She is the information broker you never have to hunt for, and that is a
     // property of the schedule rather than a promise in a comment.
-    const visits = SCHEDULES.marjorie.filter((block) => block.place === 'playerCubicle');
+    // She stops at the mouth of the cubicle, not on the tile the player spawns
+    // on — people are solid now, and she must not be standing in your chair.
+    const visits = SCHEDULES.marjorie.filter((block) => block.place === 'playerCubicleMouth');
     expect(visits.length).toBe(2);
+  });
+
+  it('always arrives before the next appointment', () => {
+    // THE regression test. When a leg took longer than the gap to the next
+    // block, NPCs were yanked onto the next route mid-walk and teleported —
+    // every route is planned from the station they were supposed to have
+    // reached, not where they actually were. Marjorie never once arrived
+    // anywhere on her circuit.
+    for (const seed of [1, 7, 4242, 90210]) {
+      const p = buildDayPlan(router, makeRng(seed));
+      for (const id of ACTOR_IDS) {
+        const legs = p[id]!;
+        for (let i = 0; i < legs.length - 1; i++) {
+          const arrival = legs[i]!.startMinute + legs[i]!.travelMinutes;
+          expect(arrival).toBeLessThanOrEqual(legs[i + 1]!.startMinute);
+        }
+      }
+    }
+  });
+
+  it('actually reaches each station, not just heads toward it', () => {
+    for (const id of ACTOR_IDS) {
+      const legs = plan[id]!;
+      legs.forEach((leg, i) => {
+        if (leg.offFloor || pathTiles(leg.path) === 0) return;
+        const next = legs[i + 1];
+        // Only legs that have a next appointment: the last walk of the day may
+        // legitimately still be in progress when five o'clock arrives.
+        if (!next) return;
+        const settleAt = next.startMinute - 1;
+        if (settleAt <= leg.startMinute) return;
+        const pose = poseAt(plan, id, settleAt, createPose());
+        if (!pose.visible) return;
+        const last = pathTiles(leg.path) - 1;
+        expect([pose.x, pose.y]).toEqual([leg.path[last * 2], leg.path[last * 2 + 1]]);
+        expect(pose.moving).toBe(false);
+      });
+    }
   });
 
   it('replays identically from the same seed', () => {

@@ -230,12 +230,22 @@ export const BALANCE = {
    *  office by accident. */
   npc: {
     /**
-     * In-game minutes to cross one tile. At 2, a walk from the mail desk to the
-     * player's cubicle is about 40 minutes — slow enough that a schedule is a
-     * real constraint on where someone can be, and fast enough that Marjorie
-     * completes her circuit twice a day.
+     * In-game minutes to cross one tile. One in-game minute is ~687ms, so 0.5
+     * puts an NPC at roughly the player's own walking pace — which is the only
+     * value that reads as a person crossing the office rather than drifting.
+     *
+     * It was 2, and that was the bug: a 24-tile crossing took 48 in-game minutes
+     * against schedule blocks 30 minutes apart, so nobody ever arrived anywhere.
      */
-    minutesPerTile: 2,
+    minutesPerTile: 0.5,
+    /**
+     * A leg must finish before the next block begins, or an NPC is yanked onto a
+     * new route mid-walk and teleports (each route starts from where they were
+     * SUPPOSED to be). Travel is clamped to this fraction of the gap, which makes
+     * arrival a structural guarantee rather than something a schedule edit can
+     * quietly break.
+     */
+    maxTravelFractionOfGap: 0.8,
     /** How close the player must stand to start a conversation, in tiles. */
     talkRadius: 1.6,
   },
