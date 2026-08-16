@@ -134,6 +134,21 @@ export class OfficeScene extends Phaser.Scene {
   private hand: SolitaireState | null = null;
   private readonly watch: WatchState = createWatchState();
   private lookoutReady = false;
+  /**
+   * The pose the person you are talking to had when the conversation opened.
+   *
+   * They are standing in front of you speaking; they must not be somewhere else.
+   * Without this they jump to wherever the clock says the moment a story charges
+   * its minutes — which reads as the person you are mid-sentence with teleporting
+   * across the room, because that is exactly what it is.
+   */
+  private talkPinnedPose: NpcPose | null = null;
+  /**
+   * Minutes a conversation has run up, charged when it CLOSES rather than
+   * mid-flow. The clock is held while you read, so charging during the
+   * conversation moves the whole cast while the box is still open.
+   */
+  private pendingTalkMinutes = 0;
 
   constructor() {
     super('Office');
@@ -475,7 +490,7 @@ export class OfficeScene extends Phaser.Scene {
     }
     if (action === 'lookout') {
       this.director.spendFavor(id);
-      this.director.spendMinutes(BALANCE.dialogue.sinks.minutes);
+      this.pendingTalkMinutes += BALANCE.dialogue.sinks.minutes;
       this.lookoutReady = true;
       this.talk = { id, stage: 'end' };
       this.dialogue.say(NPC_TEXT.fluff.lookoutBought, NPC_TEXT.ui['close'] ?? '');
@@ -490,7 +505,7 @@ export class OfficeScene extends Phaser.Scene {
    */
   private spendFavor(id: string): void {
     this.director.spendFavor(id);
-    this.director.spendMinutes(BALANCE.dialogue.sinks.minutes);
+    this.pendingTalkMinutes += BALANCE.dialogue.sinks.minutes;
     let line = NPC_TEXT.sinks[id]?.line ?? '';
 
     if (id === 'dennis') {
@@ -779,6 +794,12 @@ export class OfficeScene extends Phaser.Scene {
     this.hud.clear();
     this.talk = { id, stage: 'greeting' };
 
+    // Freeze them where they are for the whole conversation.
+    const npc = this.cast.find((candidate) => candidate.actorId === id);
+    this.talkPinnedPose = npc
+      ? { ...poseAt(this.director.plan, id, this.director.minutesFloat, createPose()) }
+      : null;
+
     // The scene takes precedence over small talk, on both sides of it.
     if (id === 'steve' && this.steveIsAsking()) return void this.openSteveAsk();
     if (id === 'dale' && this.daleWouldAsk()) return void this.openDaleAsk();
@@ -818,7 +839,9 @@ export class OfficeScene extends Phaser.Scene {
         this.closeTalk();
         return;
       }
-      this.director.spendMinutes(BALANCE.dialogue.storyMinutes);
+      // Banked, not spent: charging here would move the whole floor while the
+      // player is still reading the middle of the story.
+      this.pendingTalkMinutes += BALANCE.dialogue.storyMinutes;
       this.storiesHeard.add(id);
       this.talk.stage = 'middle';
       this.dialogue.say(story.middle, NPC_TEXT.ui['continue'] ?? '');
@@ -863,8 +886,17 @@ export class OfficeScene extends Phaser.Scene {
 
   private closeTalk(): void {
     this.talk = null;
+    this.talkPinnedPose = null;
     this.dialogue.hide();
+
+    // Now the time lands, on the same frame the box disappears — so the floor
+    // rearranging reads as "that took half an hour" rather than as a glitch.
+    const owed = this.pendingTalkMinutes;
+    this.pendingTalkMinutes = 0;
+    if (owed > 0) this.director.spendMinutes(owed);
+
     this.director.release('dialogue');
+    this.hud.setMeters(this.director.meters);
   }
 
   /**
@@ -954,6 +986,8 @@ export class OfficeScene extends Phaser.Scene {
     this.chatCounts.clear();
     this.hand = null;
     this.lookoutReady = false;
+    this.pendingTalkMinutes = 0;
+    this.talkPinnedPose = null;
     this.watch.dwell = 0;
     this.watch.venue = null;
     this.watch.caughtToday = 0;
@@ -1126,7 +1160,14 @@ export class OfficeScene extends Phaser.Scene {
   private syncCast(): void {
     const plan = this.director.plan;
     const minutes = this.director.minutesFloat;
+    const pinnedId = this.talk?.id;
+
     for (const npc of this.cast) {
+      // The person you are speaking to stays put until the conversation ends.
+      if (pinnedId === npc.actorId && this.talkPinnedPose) {
+        npc.syncTo(this.talkPinnedPose);
+        continue;
+      }
       npc.syncTo(poseAt(plan, npc.actorId, minutes, this.poseScratch));
     }
   }
