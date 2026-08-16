@@ -1,19 +1,21 @@
 # HEADCOUNT
 
 A satirical top-down pixel-art office simulator set in a 1990s corporate office.
-You are a low-level employee. There are tasks. There is a favor economy. There is
-a Performance Review on Friday.
+You are a low-level employee. There are tasks. There is a favor economy. There
+will be a Performance Review on Friday.
 
 Think Stardew Valley's daily loop meets Papers, Please's moral compromise,
 rendered entirely in beige.
 
-**Play it:** <https://headcount.ligand-ave.workers.dev> — published from `main`
-on every push.
+**Play it:** <https://headcount.ligand-ave.workers.dev> — deployed by hand, so
+the live site can sit behind `main`. See [Deploying](#deploying).
 
-**Status:** M3 — the workday runs 9-to-5 in about five and a half minutes, you
-have five meters and real work to do, and the fax machine does not have labels on
-its keys. See [DESIGN.md](DESIGN.md) for the full spec, the
-milestone roadmap, and the running list of assumptions.
+**Status:** M6 — the workday runs 9-to-5 in about five and a half minutes, you
+have five meters and real work to do, four colleagues on real schedules, and
+neither the fax machine nor the printer is on your side. The boss can only catch
+you at Solitaire if he can actually see your screen. Friday's Performance Review
+is next. See [DESIGN.md](DESIGN.md) for the full spec, the milestone roadmap, and
+the running list of assumptions.
 
 ---
 
@@ -70,8 +72,15 @@ In dev builds the game is exposed as `window.game`, plus
 
 ## Deploying
 
-Cloudflare builds straight from the repository, so **a push to `main` is a
-deploy**. Set up once:
+**Right now this is a manual step.** The repository is not connected to
+Cloudflare, so pushing to `main` does *not* update the live site — someone has to
+run:
+
+```bash
+npm run build && npx wrangler deploy
+```
+
+To make pushes deploy themselves, connect it once:
 
 1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Import a
    repository**. Pick `icarusdlqx/headcount`.
@@ -81,8 +90,9 @@ deploy**. Set up once:
    address. It is off by default, and until it is on the Overview tab says
    "No URLs enabled" and nothing is reachable however well the build went.
 
-After that, every push to `main` redeploys automatically. Pushes to any other
-branch get their own preview URL and leave production alone.
+Once those three steps are done, every push to `main` redeploys automatically and
+the manual command above stops being necessary. Pushes to any other branch get
+their own preview URL and leave production alone.
 
 Full details, including caching and deploying without pushing, are in
 [docs/HOSTING.md](docs/HOSTING.md). No GitHub Actions workflow is needed.
