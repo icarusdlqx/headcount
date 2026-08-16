@@ -17,6 +17,7 @@ export interface DayStats {
   stationaryRunMs: number;
   faxSent: number;
   faxJams: number;
+  printerCleared: number;
 }
 
 /** One committed workday. Feeds the Friday review in M7. */
@@ -59,6 +60,7 @@ export function createDayStats(): DayStats {
     stationaryRunMs: 0,
     faxSent: 0,
     faxJams: 0,
+    printerCleared: 0,
   };
 }
 
@@ -72,6 +74,7 @@ export function resetStats(stats: DayStats): void {
   stats.stationaryRunMs = 0;
   stats.faxSent = 0;
   stats.faxJams = 0;
+  stats.printerCleared = 0;
 }
 
 /** A defensive DEEP copy. The live stats are reset mid-transition, while the
@@ -86,6 +89,7 @@ export function copyStats(stats: DayStats): DayStats {
     stationaryRunMs: stats.stationaryRunMs,
     faxSent: stats.faxSent,
     faxJams: stats.faxJams,
+    printerCleared: stats.printerCleared,
   };
 }
 

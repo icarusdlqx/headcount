@@ -322,6 +322,50 @@ export const BALANCE = {
     },
   },
 
+  /**
+   * The printer. Always jammed, never your job.
+   *
+   * Priced entirely against Rapport and Strain and NEVER against Productivity —
+   * the fax stays the sole Output engine, so a second source cannot inflate it,
+   * and "fixing the printer is not work" is the joke.
+   */
+  printer: {
+    minutes: {
+      /** Buying one piece of information. Diagnosis is the whole verb. */
+      openDoor: 2,
+      /** The commitment. */
+      pull: 4,
+      /** Getting it wrong: the paper comes apart and you start again. */
+      tear: 8,
+      abandon: 3,
+    },
+    /** Three tears and it is confetti. Nobody is clearing it today. */
+    shredAfterTears: 3,
+
+    /**
+     * THE POINT OF THE WHOLE MACHINE. Fixing the printer is worth almost nothing
+     * unless somebody sees you fix it — and knowing who is in that room at what
+     * time is exactly what M4's schedules and Marjorie's favour already sell.
+     * Four to one is deliberately steep: it should change where you stand.
+     */
+    rapportUnwitnessed: 2,
+    rapportWitnessed: 8,
+    /** Leaving confetti in the machine everyone needs. */
+    rapportShredded: -6,
+
+    strainPerTear: 4,
+    /** A clean clear on a machine you understand is the one piece of work in the
+     *  game that makes you feel better rather than worse. */
+    strainCleanClear: -3,
+    strainCap: 12,
+
+    /** The panel refuses to open after this: not a five-to-five job. */
+    lastCallMinute: 440,
+    inputLockMs: 300,
+    /** Chance the machine is jammed when the day starts. It is always jammed. */
+    morningJamChance: 0.55,
+  },
+
   /** Conversations and the favor ledger. */
   dialogue: {
     /** Sitting through somebody's story costs real in-game minutes. That charge

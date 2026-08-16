@@ -36,6 +36,7 @@ import { catchIsSilent, createWatchState, stepWatch, stressDelta, type FluffVenu
 
 import { misdialReplyDeltas } from '../sim/faxTray';
 import { FAX_TEXT, LCD_CODES, assertFaxContentIntegrity } from '../ui/faxPanelView';
+import { PRINTER_TEXT, PRINTER_CODES, assertPrinterContentIntegrity } from '../ui/printerView';
 import { DAY_EVENTS, type DayEndInfo } from '../sim/events';
 import { MINUTES_PER_DAY } from '../sim/DayClock';
 import { FLAGS } from '../util/flags';
@@ -152,6 +153,7 @@ export class OfficeScene extends Phaser.Scene {
       // number three weeks later.
       for (const problem of assertContentIntegrity()) console.warn(`[content] ${problem}`);
       for (const problem of assertFaxContentIntegrity(LCD_CODES)) console.warn(`[content] ${problem}`);
+      for (const problem of assertPrinterContentIntegrity(PRINTER_CODES)) console.warn(`[content] ${problem}`);
       for (const problem of assertVisibilityCoverage(ROOMS)) console.warn(`[balance] ${problem}`);
     }
 
@@ -364,11 +366,34 @@ export class OfficeScene extends Phaser.Scene {
       // gain is invisible until the next minute ticks, which is the whole payoff.
       this.hud.setMeters(this.director.meters);
       this.narrateFaxOutcome();
+      this.narratePrinterOutcome();
     }
   }
 
   /** The reward lands OUTSIDE the modal, which is what makes the walk back to
    *  your cubicle feel earned. */
+  private narratePrinterOutcome(): void {
+    const outcome = this.director.takePrinterOutcome();
+    if (!outcome) return;
+
+    const rng = this.director.rng(`day:${this.director.state.dayIndex}:printerLine:${outcome.minutes}`);
+    const key =
+      outcome.kind === 'cleared'
+        ? outcome.witnessed
+          ? 'clearedWitnessed'
+          : 'clearedUnwitnessed'
+        : outcome.kind === 'shredded'
+          ? 'shredded'
+          : outcome.tears > 0
+            ? 'torn'
+            : 'abandoned';
+    const pool = PRINTER_TEXT.outcome[key] ?? [];
+    if (pool.length === 0) return;
+
+    const name = outcome.witnessed ? nameFor(this.director.printerWitnessId ?? '') : '';
+    this.hud.say(fill(rng.pick(pool), { name }));
+  }
+
   private narrateFaxOutcome(): void {
     const outcome = this.director.takeFaxOutcome();
     if (!outcome) return;
@@ -705,6 +730,22 @@ export class OfficeScene extends Phaser.Scene {
     this.watch.resolving = false;
   }
 
+  /**
+   * Anybody in the printer room to see you fix it. Clearing the jam is worth
+   * four times as much when it is witnessed — which makes knowing where people
+   * are at what time (M4's schedules, Marjorie's favour) pay off in a second
+   * currency.
+   */
+  private witnessInPrinterRoom(): string | null {
+    for (const npc of this.cast) {
+      if (!npc.visible) continue;
+      const tx = Math.floor(npc.x / BALANCE.view.tileSize);
+      const ty = Math.floor(npc.y / BALANCE.view.tileSize);
+      if (roomAt(tx, ty, '') === 'Printer / fax room') return npc.actorId;
+    }
+    return null;
+  }
+
   /** The nearest visible cast member within arm's reach, or null. */
   private nearestTalkableNpc(): Npc | null {
     const radius = BALANCE.npc.talkRadius * BALANCE.view.tileSize;
@@ -971,6 +1012,25 @@ export class OfficeScene extends Phaser.Scene {
     const npc = this.nearestTalkableNpc();
     if (npc) {
       this.openTalk(npc.actorId);
+      return;
+    }
+
+    // The printer. Placed BEFORE the fax branch but AFTER the NPC check, so a
+    // colleague standing at the machine is still someone you can talk to rather
+    // than scenery in front of a panel.
+    if (this.facingTileIs(TILE.PRINTER)) {
+      if (this.director.printerAvailable) {
+        this.hud.clear();
+        this.director.setPrinterWitness(this.witnessInPrinterRoom());
+        this.scene.launch('Printer');
+        this.director.hold('minigame');
+        return;
+      }
+      this.hud.say(
+        this.director.printerMachine.phase === 'shredded'
+          ? (PRINTER_TEXT.outcome['alreadyShredded']?.[0] ?? '')
+          : (PRINTER_TEXT.lcd['cleared'] ?? ''),
+      );
       return;
     }
 

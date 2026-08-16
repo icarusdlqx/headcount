@@ -1,0 +1,59 @@
+{
+  "_comment": "The printer. lcd codes are keyed by src/sim/printer.ts — every code the machine can emit must exist here. The service diagram inside panel A is for a different model and its arrows run the wrong way; that is both the joke and a fact the player genuinely learns.",
+  "window": {
+    "title": "Printer - Properties",
+    "model": "REGENT 4ML-e",
+    "hint": "A B C D open panels  ·  Enter pull  ·  Esc leave it",
+    "diagram": "A service diagram is taped inside. It is for the 4ML. This is the 4ML-e.",
+    "diagramLearned": "The diagram is for the 4ML. Somebody has corrected the arrows in biro."
+  },
+  "lcd": {
+    "code.tray": "E-51",
+    "code.registration": "E-52",
+    "code.fuser": "E-53",
+    "code.exit": "E-54",
+    "at.tray": "E-51  PAPER TRAY",
+    "at.registration": "E-52  REGISTRATION",
+    "at.fuser": "E-53  FUSER",
+    "at.exit": "E-54  EXIT PATH",
+    "read.nothing": "NOTHING HERE",
+    "read.edgeFree": "EDGE IS FREE",
+    "read.goesInFurther": "IT GOES IN FURTHER",
+    "torn": "IT TORE",
+    "tornNothing": "NOTHING TO PULL",
+    "tornBlind": "IT TORE",
+    "cleared": "READY",
+    "shredded": "E-99  SERVICE REQUIRED",
+    "abandoned": "E-51"
+  },
+  "outcome": {
+    "clearedUnwitnessed": [
+      "The sheet comes out whole. Nobody sees. The printer says READY, to you, personally.",
+      "Cleared. You put the panels back. There is no record of this."
+    ],
+    "clearedWitnessed": [
+      "{name} watches you get it out in one piece. \"Oh, thank God.\"",
+      "{name} sees the whole thing. This will be mentioned. It will be mentioned to others."
+    ],
+    "torn": [
+      "It comes apart. Half of it is still in there, further in than before.",
+      "A clean tear, straight across. The half you are holding is not the useful half."
+    ],
+    "shredded": [
+      "Confetti. The machine will not be printing today, and everyone will find out at once.",
+      "That is not paper any more. You close the panels on it and walk away, which is all anyone can do."
+    ],
+    "abandoned": [
+      "You put the panels back roughly where they were."
+    ],
+    "alreadyShredded": [
+      "E-99. Somebody would have to actually fix it, and nobody here does that."
+    ]
+  },
+  "ticket": {
+    "raise": "\"I'll raise a ticket. The ticket will go to me. I'll see it tomorrow.\"",
+    "rush": "\"Fine. FINE. I'll look at it before lunch, and we never discussed it.\"",
+    "already": "\"There's already a ticket. It's with me. I'm aware of it.\"",
+    "fixed": "The printer is working. There is no sign anyone touched it."
+  }
+}

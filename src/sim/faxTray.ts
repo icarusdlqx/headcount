@@ -1,7 +1,7 @@
 import { BALANCE } from '../config/balance';
 import type { Rng } from '../util/rng';
 import type { FaxOutcome } from './faxMachine';
-import { METER, type MeterKey } from './meters';
+import { METER, type MeterDelta } from './meters';
 
 /**
  * The day's work, and its economics.
@@ -33,10 +33,8 @@ export interface FaxJob {
   readonly coverLineIndex: number;
 }
 
-export interface MeterDelta {
-  readonly key: MeterKey;
-  readonly delta: number;
-}
+/** Re-exported for the callers that already import it from here. */
+export type { MeterDelta } from './meters';
 
 /** Stable identity keys. Display names live in fax.json, keyed by these. */
 export const RECIPIENT_IDS = ['regional', 'accounts', 'legal', 'warehouse', 'vendor', 'branch'] as const;

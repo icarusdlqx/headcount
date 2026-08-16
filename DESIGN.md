@@ -97,8 +97,11 @@ Each is diegetic and short (20–60 seconds).
 1. **Fax Machine** — a panel of unlabeled buttons; discover the correct sequence
    (dial 9 first; wrong tray jams). Sequence knowledge persists across days, so
    mastery feels good.
-2. **Printer Jam** — open the right panels in order, remove paper without tearing
-   it. Tearing makes the jam worse. Jam location is randomised per incident.
+2. **Printer Jam** — *shipped in M6.* Four panels; opening one costs two minutes
+   and tells you exactly what is behind it. Pull at the free edge and it comes
+   out whole; pull where you were told it goes in further and it tears. The verb
+   is **how much diagnosis do I buy**, which is the one thing the fax does not
+   ask. Pays only Rapport, and **four times as much if somebody sees you do it**.
 3. ~~**Dial-Up Internet**~~ — **CUT in M6.** Every verb a modem offers is already
    spoken for: sending is the fax, the delayed bill is the misdial reply, the
    screen you should not be looking at is Solitaire, buying information is
@@ -165,8 +168,8 @@ the break room only.
 | M3 | Meters + Stress + Visibility HUD; Fax Machine minigame wired to Productivity | **Done** |
 | M4 | 4 NPCs with schedules, dialogue system, favor tokens, cover-for-Steve | **Done** |
 | M5 | Line-of-sight Visibility, Solitaire fluff, caught cutscene | **Done** |
-| M6 | Printer Jam + IT ticket (dial-up cut — see docs/M6-PLAN.md) | In progress |
-| M7 | Friday review, weighted scoring, boss commentary, week progression | |
+| M6 | Printer Jam (dial-up cut — see docs/M6-PLAN.md) | **Done** |
+| M7 | Friday review, weighted scoring, boss commentary, week progression | Next |
 | M8 | Faction rep, thermostat war, 4 more random events | |
 | M9 | Real pixel art, sound, Win95 UI skin, title screen, landing copy | |
 
@@ -402,7 +405,16 @@ it if you disagree.
     timetable to memorise rather than a risk to judge.
 24. **Silence is the common catch, speech is rare.** A boss who looks, says
     nothing and keeps walking is the whole joke about this office.
-25. **Minutes are not the scarce resource.** A mastered day commits about 133 of
+25. **Fixing the printer is worth almost nothing unless somebody sees you.** +2
+    Rapport alone, +8 witnessed. It is the sharpest joke in the office and it
+    also gives M4's schedule knowledge a second currency to pay out in: knowing
+    Marjorie is in the printer room at 47 and Dennis at 367 is worth real points.
+26. **The machine tells you before it punishes you.** Opening a panel always
+    reveals whether pulling there is safe — no hidden state, no roll behind the
+    door. The dice choose which jam you get; they never choose whether you were
+    right. The first draft had a jam that tore a rule-following player 25% of the
+    time with no way to read it, which is exactly what assumption 22 forbids.
+27. **Minutes are not the scarce resource.** A mastered day commits about 133 of
     480 in-game minutes. The scarce resources are the fax tray (a hard cap on
     Output), Rapport (no passive drift, two earn sources against five drains) and
     desk-minutes (the only source of Standing). Price new work against those, not

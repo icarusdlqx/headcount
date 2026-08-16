@@ -18,6 +18,7 @@ import {
 } from './meters';
 import { FAX_TOKENS, generatePanel, type FaxOutcome, type FaxPanel } from './faxMachine';
 import { Router } from './npcPath';
+import { createPrinter, printerOutcomeDeltas, type PrinterMachine, type PrinterOutcome } from './printer';
 import { buildDayPlan, type DayPlan } from './npcSchedule';
 import { buildTray, faxOutcomeDeltas, foreignJamChance, type FaxJob, type MeterDelta } from './faxTray';
 import {
@@ -64,7 +65,12 @@ export class DayDirector {
   /** Today's Steve situation. Rebuilt each morning; only the grudge persists. */
   private steveStage: SteveStage = 'none';
   private steveJobId: string | null = null;
+  private lastPrinterOutcome: PrinterOutcome | null = null;
   private chargingMinutes = false;
+  /** Built once per DAY, never per session: leaving the room must not un-crumple
+   *  the paper, reset the tear count or re-arm the ticket. */
+  private printer: PrinterMachine | null = null;
+  private printerSeenBy: string | null = null;
 
   constructor(state: RunState, save: SaveService) {
     this.run = state;
@@ -304,6 +310,56 @@ export class DayDirector {
     this.dayPlan = buildDayPlan(this.router, this.rng(`day:${this.run.dayIndex}:cast`));
   }
 
+  // --- the printer ---------------------------------------------------------
+
+  get printerMachine(): PrinterMachine {
+    if (!this.printer) {
+      const knowsCode = this.run.learned.some((token) => token.startsWith('printer.code.'));
+      this.printer = createPrinter(this.rng(`day:${this.run.dayIndex}:printer`), knowsCode);
+    }
+    return this.printer;
+  }
+
+  /** Somebody is in the room watching you fix it — worth four times as much. */
+  get printerWitnessed(): boolean {
+    return this.printerSeenBy !== null;
+  }
+
+  setPrinterWitness(id: string | null): void {
+    this.printerSeenBy = id;
+  }
+
+  get printerWitnessId(): string | null {
+    return this.printerSeenBy;
+  }
+
+  get printerJammed(): boolean {
+    return this.printerMachine.phase === 'jammed';
+  }
+
+  /** Refuses to open on a cleared or shredded machine, and not late in the day. */
+  get printerAvailable(): boolean {
+    return (
+      this.run.phase === 'working' &&
+      this.clock.minute < BALANCE.printer.lastCallMinute &&
+      this.printerJammed
+    );
+  }
+
+  finishPrinter(outcome: PrinterOutcome): void {
+    this.lastPrinterOutcome = outcome;
+    const mastered = this.run.learned.some((token) => token.startsWith('printer.code.'));
+    this.applyDeltas(printerOutcomeDeltas(outcome, mastered));
+    this.markLearned(outcome.learnedNow);
+    if (outcome.kind === 'cleared') this.run.stats.printerCleared += 1;
+  }
+
+  takePrinterOutcome(): PrinterOutcome | null {
+    const outcome = this.lastPrinterOutcome;
+    this.lastPrinterOutcome = null;
+    return outcome;
+  }
+
   // --- the Steve situation -------------------------------------------------
 
   get steveScenario(): SteveStage {
@@ -434,6 +490,15 @@ export class DayDirector {
     this.jobs = buildTray(this.rng(`day:${this.run.dayIndex}:fax`), this.run.dayIndex);
     this.steveStage = 'none';
     this.steveJobId = null;
+    // A fresh jam each morning, or none. Built here so the whole day shares one.
+    this.printer = null;
+    this.printerSeenBy = null;
+    this.lastPrinterOutcome = null;
+    if (this.rng(`day:${this.run.dayIndex}:printerJam`).next() < BALANCE.printer.morningJamChance) {
+      void this.printerMachine;
+    } else {
+      this.printer = { ...createPrinter(this.rng('none'), false), phase: 'cleared' };
+    }
     // Today's staging. Rebuilt from the seed every morning and never persisted.
     this.rebuildDayPlan();
 

@@ -63,6 +63,14 @@ export interface PresenceSample {
 
 export type Posture = 'desk' | 'busy' | 'elsewhere';
 
+/** A change to one meter. Lives here rather than in the fax's tray module so a
+ *  second machine does not have to import the first one's economy to describe
+ *  its own payout. */
+export interface MeterDelta {
+  readonly key: MeterKey;
+  readonly delta: number;
+}
+
 /** Room exposure is keyed by the ROOMS[].name strings, which are already declared
  *  as data keys. Read through a typed local: indexing an `as const` object with a
  *  plain string is a strict-mode error, and this also hoists the lookup. */
