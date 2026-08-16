@@ -27,3 +27,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Cloudflare CLI local cache
+.wrangler/
