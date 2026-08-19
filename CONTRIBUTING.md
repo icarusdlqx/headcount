@@ -143,14 +143,11 @@ git push
 If `git push` says you don't have permission, you need to be added as a
 collaborator on the repository — ask Dave.
 
-**Pushing does not update the live site.** headcount.ligand-ave.workers.dev is
-deployed by hand, so your lines will be in the repo but not yet in the public
-game. Ask Dave to run the deploy, or run it yourself if you have the Cloudflare
-access:
-
-```bash
-npm run build && npx wrangler deploy
-```
+**Pushing to `main` updates the live site.** Cloudflare notices the push, builds
+the game and publishes it to headcount.ligand-ave.workers.dev on its own — your
+lines are in the public game a couple of minutes later. That convenience is also
+the warning: nothing between you and the live site runs the tests, so run
+`npm test` before you push.
 
 Small commits with a clear message beat one big one. If you're unsure about a
 change, push it to a branch instead and it can be looked at before it goes live:

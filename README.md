@@ -7,8 +7,8 @@ will be a Performance Review on Friday.
 Think Stardew Valley's daily loop meets Papers, Please's moral compromise,
 rendered entirely in beige.
 
-**Play it:** <https://headcount.ligand-ave.workers.dev> — deployed by hand, so
-the live site can sit behind `main`. See [Deploying](#deploying).
+**Play it:** <https://headcount.ligand-ave.workers.dev> — deploys automatically
+on every push to `main`. See [Deploying](#deploying).
 
 **Status:** M6 — the workday runs 9-to-5 in about five and a half minutes, you
 have five meters and real work to do, four colleagues on real schedules, and
@@ -72,27 +72,26 @@ In dev builds the game is exposed as `window.game`, plus
 
 ## Deploying
 
-**Right now this is a manual step.** The repository is not connected to
-Cloudflare, so pushing to `main` does *not* update the live site — someone has to
-run:
+**Pushing to `main` is the deploy.** The repository is connected to Cloudflare,
+which runs `npm run build` and then `npx wrangler deploy` on every push; the
+live site follows `main` by a couple of minutes. Pushes to any other branch get
+their own preview URL and leave production alone.
+
+The manual command still works and does the same thing without a push:
 
 ```bash
 npm run build && npx wrangler deploy
 ```
 
-To make pushes deploy themselves, connect it once:
+Two things worth knowing:
 
-1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Import a
-   repository**. Pick `icarusdlqx/headcount`.
-2. Build command `npm run build`, output directory `dist`, production branch
-   `main`. Node version comes from `.node-version`, so leave it alone.
-3. **Turn the URL on.** Project → **Domains** → enable the `*.workers.dev`
-   address. It is off by default, and until it is on the Overview tab says
-   "No URLs enabled" and nothing is reachable however well the build went.
-
-Once those three steps are done, every push to `main` redeploys automatically and
-the manual command above stops being necessary. Pushes to any other branch get
-their own preview URL and leave production alone.
+- **The build does not run the tests.** `tsc` gates it (a type error never
+  reaches the live site), but a failing test sails through — `npm test` before
+  pushing to `main` is on you.
+- **If deploys silently stop,** look for a "disconnected from your Git account"
+  banner under **Settings → Build** in the dashboard. The fix is not the
+  disconnect button; it is re-granting the Cloudflare Workers and Pages GitHub
+  App access to this repository at <https://github.com/settings/installations>.
 
 Full details, including caching and deploying without pushing, are in
 [docs/HOSTING.md](docs/HOSTING.md). No GitHub Actions workflow is needed.
